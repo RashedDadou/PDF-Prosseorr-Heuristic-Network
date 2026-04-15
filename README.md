@@ -115,6 +115,9 @@ git clone https://github.com/rasheddadou/HeuristicMind.git
 cd HeuristicMind
 pip install -r requirements.txt
 
+---
+
+
 ## The difference between "dumb" and "smart" search
 How does a heuristic network work?
 
