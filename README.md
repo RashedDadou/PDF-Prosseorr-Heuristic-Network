@@ -40,7 +40,37 @@ When you search for information on **page 10**, you don't just get page 10, but 
 
 ---
 
-## The difference between "dumb" and "smart" search
+# HeuristicMind
+
+**A Conscious Heuristic Network for Transforming Documents into a Coherent Knowledge Map**
+
+Transforms any PDF from "numbered pages" into a **neural network of ideas** — connecting knowledge blocks, uncovering semantic relationships, and building cumulative awareness around the content.
+
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+
+![License](https://img.shields.io/badge/License-MIT-green)
+
+## ✨ Key Features
+
+- **Hybrid Heuristic Network (Heuristic + Semantic)**: Connects pages by keywords and semantic similarities.
+
+- **Awareness Supervisor Engine**: Builds a knowledge base, uncovers intelligent split points, and applies layers of awareness.
+
+- **Intelligent PDF Handling**: Handles blank pages, images, and uses LRU Cache for memory management.
+
+- **Intelligent Retrieval**: Returns the page + its near context + the remote subject context.
+
+- **Complete Separation Between Processing and Reasoning**: Ready for mockups or any LLM (Grok, Cloud, OpenAI, etc.).
+
+## 🧠 How Does a Heuristic Network Work?
+
+→ Read the simplified and detailed explanation: **[docs/HEURISTIC_NETWORK.md](docs/HEURISTIC_NETWORK.md)**
+
+(Explains indexing, horizontal and vertical linking, intelligent retrieval, and the difference between dumb and smart search)
+
+## 🚀 Installation
+
+```
 
 | Aspect | Traditional (dumb) search | Inferential network (smart) |
 
@@ -81,7 +111,11 @@ This can be achieved by using **Vector Embeddings** and transforming them into a
 **Part of the HeuristicMind project**
 Designed to be the foundation for intelligent, conscious document processing systems.
 
+git clone https://github.com/rasheddadou/HeuristicMind.git
+cd HeuristicMind
+pip install -r requirements.txt
 
+## The difference between "dumb" and "smart" search
 How does a heuristic network work?
 
 Read the simplified and detailed explanation → [Heuristic Network] (docs/HEURISTIC_NETWORK.md)
