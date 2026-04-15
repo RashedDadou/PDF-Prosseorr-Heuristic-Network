@@ -64,7 +64,7 @@ Transforms any PDF from "numbered pages" into a **neural network of ideas** — 
 
 ## 🧠 How Does a Heuristic Network Work?
 
-→ Read the simplified and detailed explanation: **[docs/HEURISTIC_NETWORK.md](docs/HEURISTIC_NETWORK.md)**
+→ Read the simplified and detailed explanation: **[docs/HEURISTIC_NETWORK.md](docs.HEURISTIC_NETWORK.md)**
 
 (Explains indexing, horizontal and vertical linking, intelligent retrieval, and the difference between dumb and smart search)
 
