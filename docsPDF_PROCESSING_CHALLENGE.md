@@ -59,8 +59,11 @@ It proves that:
 
 ---
 
+## Large File Processing Experience
+Read the 214-page file processing analysis → [PDF_PROCESSING_CHALLENGE.md](docs.PDF_PROCESSING_CHALLENGE.md)
 **Part of the HeuristicMind Project**
 
+---
 Would you like to try **batch processing** two files now to see how the LRU Cache handles double data compression?
 
 Or would you prefer that we add the **Export to JSON/Markdown** feature first?
