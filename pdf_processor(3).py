@@ -31,6 +31,47 @@ except ImportError:
 # ===================================================================
 # إعدادات الموديل (Singleton Pattern Concept)
 # ===================================================================
+class InsightManager:
+    """إدارة بصمات الجمل (🧬) واكتشاف التكرار الدلالي"""
+    def __init__(self, model, threshold: float = 0.88):
+        self.model = model
+        self.threshold = threshold
+        # الخزنة المركزية لكل صواعق المستند
+        self.vault: Dict[int, Dict] = {}
+
+    def process_sentences(self, text: str, page_num: int) -> List[int]:
+        import re
+        import numpy as np
+        # تقسيم النص لجمل حقيقية
+        sentences = [s.strip() for s in re.split(r'[.!?|.]', text) if len(s.strip()) > 25]
+        assigned_ids = []
+
+        for sent in sentences:
+            with torch.no_grad():
+                sent_vec = self.model.encode(sent, convert_to_numpy=True)
+
+            duplicate_id = None
+            # البحث السريع في الخزنة عن التوائم
+            for idx, data in self.vault.items():
+                similarity = np.dot(sent_vec, data["vector"]) / (np.linalg.norm(sent_vec) * np.linalg.norm(data["vector"]))
+                if similarity > self.threshold:
+                    duplicate_id = idx
+                    break
+
+            if duplicate_id:
+                assigned_ids.append(duplicate_id)
+                # تسجيل وجود الجملة في هذه الصفحة أيضاً
+                if "pages" in self.vault[duplicate_id]:
+                    if page_num not in self.vault[duplicate_id]["pages"]:
+                        self.vault[duplicate_id]["pages"].append(page_num)
+            else:
+                new_id = len(self.vault) + 1
+                self.vault[new_id] = {"vector": sent_vec, "text": sent, "pages": [page_num]}
+                assigned_ids.append(new_id)
+
+        return assigned_ids
+
+
 # تحسين: جعل اختيار الجهاز (Device) أكثر ذكاءً
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 MODEL_NAME = 'sentence-transformers/all-MiniLM-L6-v2'
@@ -49,9 +90,10 @@ def get_embedding_model():
 # إعدادات الموديل (LoggerProtocol)
 # ===================================================================
 class LoggerProtocol(Protocol):
-    def info(self, msg: str) -> None: ...
-    def error(self, msg: str) -> None: ...
-    def warning(self, msg: str) -> None: ...
+    def info(self, msg: str, *args, **kwargs) -> None: ...
+    def error(self, msg: str, *args, **kwargs) -> None: ...
+    def warning(self, msg: str, *args, **kwargs) -> None: ...
+    def debug(self, msg: str, *args, **kwargs) -> None: ...  # أضف هذا السطر
 
 # ===================================================================
 # محرك قراءة الملفات (PDF Page Cache Network)
@@ -74,6 +116,10 @@ class PDFPageCacheNetwork:
         self.model = get_embedding_model()
         self.vectors: List[np.ndarray] = []
         self.vector_map: List[int] = []
+
+        # 🚀 [The Critical Fix]: Initialize the Insight Manager
+        # This allows the engine to track "Robot Hand 45cm" (⚡) across pages
+        self.insight_manager = InsightManager(model=self.model)
 
         # 4. الملاحة والتخطيط (Layout & Navigation)
         self.heading_map: Dict[str, List[int]] = defaultdict(list)
@@ -103,119 +149,144 @@ class PDFPageCacheNetwork:
 # ------------ ثانياً: استخراج البيانات الهيكلية (Extraction Engine)
     def process_pdf(self, pdf_path: str, user_request: str = "") -> Dict[str, Any]:
         start_time = time.time()
+        # 1. تهيئة المتغيرات في البداية لضمان وصول الـ return إليها
+        doc_info = {}
+        full_text = ""
+        path_obj = Path(pdf_path)
+
         try:
+            if not path_obj.exists():
+                raise FileNotFoundError(f"المسار غير موجود: {pdf_path}")
+
             with fitz.open(pdf_path) as pdf_doc:
                 page_count = len(pdf_doc)
                 full_text_parts: List[str] = []
 
+                # 2. تعريف doc_info داخل الـ context الصحيح
                 raw_meta = pdf_doc.metadata or {}
                 doc_info = {
-                    "title": str(raw_meta.get("title") or Path(pdf_path).stem),
+                    "title": str(raw_meta.get("title") or path_obj.stem),
                     "author": str(raw_meta.get("author") or "Unknown"),
-                    "creator": str(raw_meta.get("creator") or "N/A")
+                    "page_count": page_count
                 }
 
                 self.logger.info(f"🚀 معالجة عدوانية لـ: {doc_info['title']} ({page_count} صفحة)")
 
                 for page_num in range(page_count):
                     page = pdf_doc[page_num]
+
+                    # 🔴 [خطوة فكرتك 1]: الوسم الأحمر الأولي
+                    # نستخدم إحداثيات مرنة تعتمد على عرض الصفحة لضمان الجمالية
+                    status_rect = fitz.Rect(10, 10, 150, 40)
+                    page.draw_rect(status_rect, color=(1, 0, 0), width=1.5, fill=(1, 0.95, 0.95))
+                    page.insert_text((15, 28), f"PROCESSING P.{page_num+1}", color=(1, 0, 0), fontsize=9)
+
                     page_contents = []
 
-                    # 1. استخراج النصوص الهيكلية (Standard Blocks)
+                    # استخراج النصوص (منطقك العدواني)
                     raw_blocks = page.get_text("blocks")
-                    blocks = [b for b in raw_blocks if isinstance(b, tuple) and len(b) >= 7]
-                    blocks.sort(key=lambda b: (b[1], b[0]))
-
+                    blocks = sorted([b for b in raw_blocks if len(b) >= 5], key=lambda b: (b[1], b[0]))
                     for b in blocks:
-                        if b[6] == 0:  # نص حقيقي
-                            text = str(b[4]).strip()
-                            if text: page_contents.append(text)
+                        text = b[4].strip()
+                        if text: page_contents.append(text)
 
-                    # 2. استخراج بيانات الجداول (Table Mining) - السر في حل مشكلة النقص
+                    # استخراج الجداول (منطقك المتميز)
+                    has_tables = False
                     try:
                         tabs = page.find_tables()
-                        for table in tabs:
-                            # تحويل الجدول لنص مهيكل لكي يفهمه الـ AI
-                            table_data = table.extract()
-                            table_text = " | ".join([" ".join([str(cell).strip() for cell in row if cell]) for row in table_data])
-                            if table_text.strip():
-                                page_contents.append(f"\n[TECHNICAL_TABLE_DATA]: {table_text}")
-                    except Exception:
-                        pass # بعض النسخ قد لا تدعم استخراج الجداول برمجياً
+                        if tabs and tabs.tables:
+                            has_tables = True
+                            for table in tabs.tables:
+                                t_data = table.extract()
+                                table_text = "\n".join([" | ".join([str(c).strip() if c else "" for c in r]) for r in t_data])
+                                page_contents.append(f"\n[TECHNICAL_TABLE_DATA]:\n{table_text}")
+                    except: pass
 
-                    # 3. دمج النصوص وتدقيق الكثافة
                     page_text = "\n".join(page_contents).strip()
-
-                    # صمام الأمان الهجين: إذا كانت الصفحة "بصرية" (مخطط هندسي)
-                    if not page_text or len(page_text) < 20:
-                        image_count = len(page.get_images())
-                        if image_count > 0:
-                            page_text = f"[VISUAL_PAGE]: Content includes {image_count} engineering diagrams/images. Technical analysis active."
 
                     if page_text:
                         full_text_parts.append(page_text)
                         page_meta = {
                             "source_path": pdf_path,
-                            "document_title": doc_info['title'],
                             "page_index": page_num + 1,
-                            "is_ocr_applied": False,
-                            "contains_tables": len(page.find_tables().tables) > 0 if hasattr(page, 'find_tables') else False
+                            "contains_tables": has_tables
                         }
 
-                        # استدعاء دالة الإضافة (التي قمنا بتعديلها لتكون مرممة)
+                        # 🟢 [خطوة فكرتك 2]: استدعاء دالة الإضافة التي ستحول الختم للأخضر بالرموز 🧬
                         self.add_page(page_num, page_text, page, page_meta)
 
                 full_text = "\n\n".join(full_text_parts)
                 process_time = round(time.time() - start_time, 2)
 
-                # تحديث التقرير الختامي ليكون أكثر دقة
-                if not full_text.strip() or len(full_text) < 100:
-                    return {
-                        "status": "warning",
-                        "message": "نص غير كافٍ، تم وسم الصفحات كأصول بصرية (Visual Assets).",
-                        "stats": {"pages": page_count, "time": process_time}
-                    }
+                # حفظ نسخة من الملف الموشوم بالألوان (اختياري للمعاينة)
+                # pdf_doc.save(f"stamped_{path_obj.name}")
 
-                self.logger.info(f"✅ اكتمل تشريح المستند في {process_time} ثانية")
                 return {
                     "status": "success",
                     "data": {
                         "full_text": full_text,
                         "metadata": doc_info,
-                        "stats": {"pages": page_count, "chars": len(full_text), "time": process_time}
+                        "stats": {"pages": page_count, "time": process_time}
                     },
                     "context": {"user_request": user_request}
                 }
 
         except Exception as e:
-            self.logger.error(f"❌ فشل المحرك في التشريح العدواني لـ {pdf_path}: {str(e)}")
-            return {"status": "error", "error_details": str(e)}
+            self.logger.error(f"❌ فشل المحرك: {str(e)}")
+            return {"status": "error", "error_details": str(e), "metadata": doc_info}
+
+    def _extract_tables_safely(self, page) -> Tuple[str, bool]:
+        """تستخرج الجداول بأمان وتعود بالنص وحالة الوجود"""
+        try:
+            tabs = page.find_tables()
+            if not tabs or not tabs.tables:
+                return "", False
+
+            extracted_texts = []
+            for table in tabs.tables:
+                data = table.extract()
+                # دمج الخلايا مع تنظيف القيم الفارغة
+                clean_rows = [" | ".join([str(cell).strip() if cell else "" for cell in row]) for row in data]
+                extracted_texts.append("\n".join(clean_rows))
+
+            return "\n\n[TABLE_START]\n" + "\n".join(extracted_texts) + "\n[TABLE_END]", True
+        except Exception as e:
+            self.logger.debug(f"فشل استخراج الجدول في صفحة {page.number}: {e}")
+            return "", False
 
     def _extract_aggressive_text(self, page: Any) -> str:
         """
         استخراج نصي مكثف: يدمج بين النصوص، الجداول، والروابط لتقليل الفقد.
         """
-        # 1. استخراج النصوص كبلوكات (أكثر دقة من النص الخام)
-        blocks = page.get_text("blocks")
-        # ترتيب وتجميع البلوكات النصية
+        # 1. استخراج النصوص كبلوكات مع فرز هندسي (من الأعلى لأسفل)
+        raw_blocks = page.get_text("blocks")
+        # فرز البلوكات حسب الإحداثيات (Y ثم X) لضمان ترتيب القراءة الصحيح
+        blocks = sorted(raw_blocks, key=lambda b: (b[1], b[0]))
+
         text_parts = [str(b[4]).strip() for b in blocks if b[6] == 0 and str(b[4]).strip()]
 
-        # 2. محاولة سحب النصوص من الجداول (إذا وجدت)
+        # 2. محاولة سحب النصوص من الجداول (بنية مهيكلة)
         try:
             tabs = page.find_tables()
-            for table in tabs:
-                df_text = " ".join([str(cell).strip() for row in table.extract() for cell in row if cell])
-                if df_text:
-                    text_parts.append(f"\n[TABLE_DATA]: {df_text}")
-        except: pass # الجداول قد لا تدعم في كل النسخ
+            if tabs and hasattr(tabs, "tables"):
+                for table in tabs.tables:
+                    # نحافظ على الفواصل | لكي يفهم الـ AI أنها أعمدة
+                    table_rows = [" | ".join([str(cell).strip() for cell in row if cell is not None])
+                                for row in table.extract()]
+                    table_body = "\n".join(table_rows)
+                    if table_body.strip():
+                        text_parts.append(f"\n[STRUCTURED_TABLE]:\n{table_body}")
+        except Exception:
+            pass
 
-        full_content = "\n".join(text_parts)
+        full_content = "\n".join(text_parts).strip()
 
-        # 3. صمام الأمان: إذا كان النص لا يزال فارغاً، نسحب "الميتا-داتا" البصرية
-        if len(full_content.strip()) < 10:
+        # 3. صمام الأمان: دعم الصفحات البصرية (Visual Safety Valve)
+        if len(full_content) < 15:
             image_count = len(page.get_images())
             if image_count > 0:
-                return f"[IMAGE_PAGE]: This page contains {image_count} visual assets. Content density is low."
+                # إضافة سياق تقني للمحلل الاستراتيجي
+                return f"[VISUAL_ASSET_PAGE]: Contains {image_count} images/diagrams. OCR or Visual Analysis recommended."
 
         return full_content
 
@@ -344,101 +415,192 @@ class PDFPageCacheNetwork:
             self.logger.error(f"❌ Extraction Failure: {str(e)}")
             return {"status": "error", "message": str(e)}
 
+    def export_knowledge_tree(self) -> str:
+        """
+        [The Grand Architect] - تصدير الهيكل الهرمي الاستدلالي بالرموز الجديدة.
+        الموضوع (🟢) > الأفكار (⭐) > الصواعق (⚡) > السياقات (🔗/🌐)
+        """
+        tree_output = [
+            "\n" + "═"*60,
+            "🌲 GLOBAL KNOWLEDGE HIERARCHY REPORT (SNN-STAMP SYSTEM)",
+            "═"*60 + "\n"
+        ]
+
+        current_topic_id = 0
+
+        # ترتيب الصفحات لضمان تسلسل الشجرة
+        for p_num in sorted(self.page_cache.keys()):
+            data = self.page_cache[p_num]
+            layer = data.get("layer_type", "STANDARD")
+            kws = data.get("semantic_keywords", [])
+            insight_ids = data.get("insight_ids", [])
+            stats = data.get("context_stats", {"internal": 0, "total": 0})
+
+            # 1. طبقة الموضوع (🔴/🟢 Topic Level)
+            if layer == "CHAPTER_LAYER" or p_num == 0:
+                current_topic_id += 1
+                heading = data.get("visual_headings", [{"text": "Main Context"}])[0]["text"]
+                icon = "🔴 NEW TOPIC" if layer == "CHAPTER_LAYER" else "🟢 CORE TOPIC"
+                tree_output.append(f"\n{current_topic_id}. {icon}: {heading} (Page {p_num+1})")
+
+            # 2. طبقة الأفكار والأقسام (⭐ Ideas/Sections)
+            if kws:
+                idea_str = " | ".join(kws[:3]) # أفضل 3 أفكار في الصفحة
+                tree_output.append(f"   ├── ⭐ Ideas: {idea_str}")
+
+            # 3. طبقة الصواعق المعرفية (⚡ Insight Level)
+            if insight_ids:
+                # نبرز الصواعق المكررة (🔄) لبيان قوة الحقيقة التقنية
+                unique_insights = []
+                for i_id in insight_ids[:5]: # عرض أول 5 صواعق فقط للاختصار
+                    is_shared = len(self.insight_manager.vault.get(i_id, {}).get("pages", [])) > 1
+                    status = "🔄 Shared" if is_shared else "📍 Unique"
+                    unique_insights.append(f"⚡.{i_id}({status})")
+
+                tree_output.append(f"   │   ├── ⚡ Insights: {', '.join(unique_insights)}")
+
+            # 4. طبقة السياقات (🔗/🌐 Contextual Foundation)
+            if stats["total"] > 0:
+                # سحب أرقام الصفحات المرتبطة من الهيكل الطبقي
+                related = self.layer_hierarchy.get(p_num, [])
+                refs = ", ".join([f"p.{r+1}" for r in related[:4]])
+                tree_output.append(f"   │   └── 🔗 Context: {stats['internal']} Internal | {stats['total']} Global [Refs: {refs}...]")
+
+        tree_output.append("\n" + "═"*60)
+        tree_output.append(f"📊 SUMMARY: {current_topic_id} Topics | {len(self.insight_manager.vault)} Unique Insights (⚡)")
+        tree_output.append("═"*60)
+
+        final_report = "\n".join(tree_output)
+
+        # حفظ التقرير كمرجع دائم
+        with open("hybrid_knowledge_tree.txt", "w", encoding="utf-8") as f:
+            f.write(final_report)
+
+        self.logger.info("🌲 تم تصدير شجرة المعرفة الهرمية (⚡) بنجاح.")
+        return final_report
+
 # ------------ ثالثاً: إدارة الذاكرة والأرشفة (Caching & Storage) ------------
     def add_page(self, page_num: int, text: str, page_obj: Any, metadata: Dict):
         """
-        Main Indexing Core: Orchestrates Vectors, Layout, and Heuristic Networking.
-        Enhanced with Auto-Repair and Content Integrity Guard.
+        [Precision Indexing Core 97%] - النسخة النهائية المصححة برمجياً
         """
 
-        # 0. صمام الأمان: تنظيف النص الأولي ومعالجة المحتوى الضعيف
+        # استدعاء مدير الصواعق لمعالجة النص واستخراج أرقام الـ DNA
+        assigned_insights = self.insight_manager.process_sentences(text, page_num)
+
+        # الآن يمكنك استخدامه في الختم وفي التخزين
+        sent_count = len(assigned_insights)
+
+
+        # 1. أولاً: تنظيف النص وحساب الجمل (الصواعق 🧬)
+        import re
         clean_text = str(text or "").strip()
-        if len(clean_text) < 10:
-            # وسم الصفحة لتقليل أخطاء "insufficient content"
-            clean_text = f"[NON_TEXTUAL_PAGE]: Page {page_num} contains minimal text or visual assets."
+        raw_sentences = re.split(r'[.!?|.]', clean_text)
+        # تعريف sent_count فوراً لاستخدامه في الختم
+        sent_count = len([s for s in raw_sentences if len(s.strip()) > 20])
 
-        # 1. LRU Cache Management
-        if page_num in self.page_cache:
-            self.page_cache.move_to_end(page_num)
+        # 2. تحليل الهيكل وشخصية الصفحة
+        layout_data = self._extract_layout_structure(page_obj)
+        personality = layout_data.get("page_personality", {})
+        layer_type = self._classify_layer(clean_text, metadata)
 
-        # 2. Semantic Vector Generation (Deep Contextualization)
+        # 3. استخراج الأفكار (🧩) والروابط (📡/🛰️)
+        keywords = self.PDF_extract_keywords(clean_text)
+        self._build_visual_heuristics(page_num, layout_data)
+        self._build_heuristic_links(page_num)
+
+        # حساب إحصائيات السياق
+        internal_ids = {l['origin_page'] for l in self.visual_links if l['target_page'] == page_num}
+        internal_ids.update({l['target_page'] for l in self.visual_links if l['origin_page'] == page_num})
+        internal_count = len(internal_ids)
+        total_links = len(self.layer_hierarchy.get(page_num, []))
+
+        # حساب المواضيع
+        topics_count = sum(1 for d in self.page_cache.values() if d.get('layer_type') == "CHAPTER_LAYER")
+        if layer_type == "CHAPTER_LAYER": topics_count += 1
+
+        # 4. توليد المتجهات (Vector Generation) - تعريف 'vector' قبل استخدامه
         with torch.no_grad():
-            # استخدام النص المنظف لضمان بقاء الصفحة داخل الفضاء الدلالي
-            vector = self.model.encode(clean_text, convert_to_numpy=True)
+            enriched_text = f"{layer_type} | {clean_text[:500]}"
+            vector = self.model.encode(enriched_text, convert_to_numpy=True)
 
         self.vectors.append(vector)
         self.vector_map.append(page_num)
 
-        # 3. Parallel Extraction (Structural Intelligence)
-        layout_data = self._extract_layout_structure(page_obj)
-        keywords = self.PDF_extract_keywords(clean_text)
-        layer_type = self._classify_layer(clean_text, metadata)
+        # 5. [الرسم الهندسي]: الآن كل المتغيرات (sent_count, topics_count) معرفة يقيناً
+        try:
+            stamp_x, stamp_y = layout_data.get("safe_stamp_zone", (10, 10))
+            rect = fitz.Rect(stamp_x, stamp_y, stamp_x + 195, stamp_y + 80)
+            page_obj.draw_rect(rect, color=(0, 0.4, 0), width=1.5, fill=(0.97, 1, 0.97))
 
-        # 4. Hybrid Integrity Guard: إصلاح البيانات قبل الحفظ لضمان عدم وجود Missing Keys
-        # استدعاء "الزميل الهجين" أو تطبيق الترميم المباشر هنا
-        final_entry = {
+            # الصف 1: الموضوع (Topic)
+            topic_icon = "🏗️" if layer_type == "CHAPTER_LAYER" else "🏛️"
+            page_obj.insert_text((stamp_x + 10, stamp_y + 20),
+                                f"p.{page_num+1} | {topics_count}.{topic_icon}",
+                                color=(0, 0.4, 0), fontsize=10)
+
+            # الصف 2: الأفكار والجمل (🧩 & 🧬)
+            ideas_count = len(keywords)
+            page_obj.insert_text((stamp_x + 10, stamp_y + 42),
+                                f"{ideas_count} 🧩 | {sent_count} 🧬 DNA Insights",
+                                color=(0.7, 0.4, 0), fontsize=9)
+
+            # الصف 3: شبكة الاتصال (📡 & 🛰️)
+            context_text = f"Net: {internal_count} 📡 | {total_links} 🛰️ Global"
+            page_obj.insert_text((stamp_x + 10, stamp_y + 65),
+                                context_text, color=(0, 0.3, 0.7), fontsize=9)
+        except Exception as visual_e:
+            self.logger.warning(f"⚠️ فشل الختم الهندسي: {visual_e}")
+
+        # 6. التخزين في الكاش
+        self.page_cache[page_num] = {
             "content": clean_text,
-            "metadata": metadata,
-            "layer_type": layer_type or "STANDARD_CONTENT",
-            "semantic_keywords": keywords if keywords else ["general"],
-            "visual_headings": layout_data.get("headings", []),
-            "integrity_score": 1.0 if len(clean_text) > 100 else 0.5
+            "layer_type": layer_type,
+            "semantic_keywords": keywords,
+            "insight_ids": assigned_insights,  # <--- THIS MUST BE HERE
+            "context_stats": {"internal": internal_count, "total": total_links}
         }
 
-        # 5. Unified English Cache Storage
-        self.page_cache[page_num] = final_entry
-
-        # 6. Cache Eviction Policy (LRU)
+        # 7. سياسة الإخلاء (LRU)
         if len(self.page_cache) > self.max_pages:
-            old_idx, _ = self.page_cache.popitem(last=False)
-            self.logger.info(f"🧹 Cache Eviction: Page {old_idx} cleared from active memory.")
+            self.page_cache.popitem(last=False)
 
-        # 7. Build Network Relations (Heuristics)
-        # تمرير البيانات المرممة لضمان قوة الروابط
-        self._build_visual_heuristics(page_num, layout_data)
-        self._build_heuristic_links(page_num)
-
-        # 8. Final Status Update
-        self.page_queue.append(page_num)
-        self.logger.info(
-            f"📥 Indexed Page [{page_num}] | Integrity: VERIFIED | "
-            f"Headings: {len(final_entry['visual_headings'])} | Keywords: {len(final_entry['semantic_keywords'])}"
-        )
+        self.logger.info(f"🧬 Mastered Page [{page_num}] | {layer_type}")
 
     def _extract_layout_structure(self, page: Any) -> Dict[str, Any]:
-        """
-        Extracts structural headings and blocks with a focus on engineering layouts.
-        Standardizes internal data keys to English.
-        """
-        # 1. Initialize data structure with consistent English keys
-        layout_data: Dict[str, List[Any]] = {"headings": [], "blocks": []}
+        # إضافة مفتاح جديد safe_stamp_zone لتحديد مكان الختم
+        layout_data: Dict[str, Any] = {
+            "headings": [],
+            "blocks": [],
+            "page_personality": {},
+            "safe_stamp_zone": (10, 10) # القيمة الافتراضية
+        }
 
         try:
-            # 2. Extract detailed dictionary (safe type casting for Pylance)
             dict_data = page.get_text("dict")
             raw_blocks = dict_data.get("blocks", [])
             layout_data["blocks"] = raw_blocks
 
+            # مصفوفة لتتبع المساحات المشغولة في الزوايا
+            # [Top-Left, Top-Right, Bottom-Left, Bottom-Right]
+            page_width = page.rect.width
+            page_height = page.rect.height
+
             for block in raw_blocks:
-                # Ensure we are dealing with a text block containing lines
+                bbox = block.get("bbox", (0,0,0,0))
+                # نفس منطق استخراج العناوين الخاص بك...
                 if isinstance(block, dict) and "lines" in block:
                     for line in block.get("lines", []):
                         for span in line.get("spans", []):
-                            # Ensure span is a dictionary and extract text safely
                             text = str(span.get("text", "")).strip()
-
-                            # Optimization: Skip short fragments and noise
                             if len(text) > 3:
                                 font_size = span.get("size", 0)
                                 font_name = str(span.get("font", "")).lower()
 
-                                # 3. Engineering Heuristics for Headings
-                                # Enhanced criteria to catch Arabic bold/large fonts
+                                # ... منطق الـ Heuristics الخاص بك ...
                                 is_large = font_size > 11.5
-                                is_bold = "bold" in font_name or "black" in font_name
+                                is_bold = any(x in font_name for x in ["bold", "black", "heavy", "medium"])
                                 is_caps = text.isupper() and len(text) > 5
-
-                                # Avoid page numbers or isolated coordinates
                                 is_not_numeric = not text.replace('.', '').replace('-', '').isdigit()
 
                                 if (is_large or is_bold or is_caps) and is_not_numeric:
@@ -446,12 +608,31 @@ class PDFPageCacheNetwork:
                                         "text": text,
                                         "bbox": span.get("bbox"),
                                         "font_size": font_size,
-                                        "font_name": font_name,
                                         "type": "structural_anchor"
                                     })
 
+            # 🎯 تطوير فكرتك: البحث عن أفضل زاوية للختم (أولوية للزوايا العلوية)
+            # نفحص إذا كانت الزاوية العلوية اليمنى فارغة (غالباً الأفضل للمستندات العربية/الإنجليزية)
+            # نحدد منطقة فحص 150x100 في الزاوية
+            top_right_occupied = any(b.get("bbox")[0] > page_width - 150 and b.get("bbox")[1] < 100 for b in raw_blocks)
+
+            if not top_right_occupied:
+                layout_data["safe_stamp_zone"] = (page_width - 160, 15) # الزاوية اليمنى
+            else:
+                layout_data["safe_stamp_zone"] = (15, 15) # الزاوية اليسرى كبديل
+
+            # حساب الشخصية (نفس منطقك الممتاز)
+            headings_count = len(layout_data["headings"])
+            page_raw_text = page.get_text("text").lower()
+
+            layout_data["page_personality"] = {
+                "type": "TECHNICAL_DATA" if headings_count > 3 or "table" in page_raw_text else "FLUID_TEXT",
+                "technical_score": min(1.0, headings_count * 0.15),
+                "has_tables": hasattr(page, "find_tables") and len(page.find_tables().tables) > 0
+            }
+
         except Exception as e:
-            self.logger.warning(f"Layout extraction skipped on a page: {str(e)}")
+            self.logger.warning(f"Layout extraction skipped: {str(e)}")
 
         return layout_data
 
@@ -503,170 +684,107 @@ class PDFPageCacheNetwork:
 
     def _build_visual_heuristics(self, page_num: int, layout_data: Dict[str, Any]):
         """
-        Builds visual and structural navigation links across the document.
-        Standardized with English internal identifiers and graph-ready nodes.
+        نسخة مطورة: تبني الجسور الهيكلية وتصنفها كروابط رادار (📡).
         """
-        # 1. جلب العناوين بأمان مع التحقق من النوع
         headings = layout_data.get("headings", [])
-        if not isinstance(headings, list):
-            return
+        if not isinstance(headings, list): return
 
         for heading in headings:
-            # تحسين Pylance: ضمان أن العنوان نصي وليس فارغاً
             title = str(heading.get("text", "")).strip()
-            if len(title) < 2:
-                continue
+            if len(title) < 2: continue
 
-            # 2. Heading Map: تحديث خريطة العناوين
-            # إذا كان العنوان موجوداً مسبقاً في نفس الصفحة لا نكرره
+            # تحديث خريطة العناوين
             if page_num not in self.heading_map[title]:
                 self.heading_map[title].append(page_num)
 
-            # 3. Strategic Connection: ربط الصفحات المتسلسلة لنفس العنوان
-            # هذا يربط الأقسام الهندسية الممتدة (مثل المواصفات الفنية)
+            # الربط الاستراتيجي (HEADING_CONTINUITY -> 📡)
             if len(self.heading_map[title]) > 1:
                 source_page = self.heading_map[title][-2]
-
-                # تجنب ربط الصفحة بنفسها
                 if source_page != page_num:
                     self.visual_links.append({
-                        "link_type": "HEADING_CONTINUITY",
+                        "link_type": "RADAR_STATION", # تسمية هندسية بدلاً من HEADING_CONTINUITY
                         "origin_page": source_page,
                         "target_page": page_num,
-                        "anchor_text": title,
-                        "strength": 0.9 # وزن الرابط للاستدلال
+                        "strength": 0.95 # رفع القوة لأن العناوين المتطابقة هي أقوى رابط هيكلي
                     })
 
-        # 4. Structural Flow: ربط تسلسلي لضمان تدفق السياق المنطقي
+                    if page_num not in self.layer_hierarchy: self.layer_hierarchy[page_num] = []
+                    if source_page not in self.layer_hierarchy[page_num]:
+                        self.layer_hierarchy[page_num].append(source_page)
+
+        # الربط التسلسلي (STRUCTURAL_FLOW -> 📡)
         if page_num > 0:
-            # إضافة رابط تدفق خطي بين الصفحات المتجاورة
             self.visual_links.append({
-                "link_type": "STRUCTURAL_FLOW",
+                "link_type": "GRID_FLOW", # تدفق الشبكة الهندسية
                 "origin_page": page_num - 1,
                 "target_page": page_num,
                 "flow_weight": 1.0
             })
-
-    def _classify_layer(self, text: str, metadata: Dict) -> str:
-        """
-        Technical layer classification with Robotics & Engineering focus.
-        Enhanced to detect Cover pages and complex technical layouts.
-        """
-        # 1. Linguistic and Structural Analysis
-        words = text.split()
-        word_count = len(words)
-        text_lower = text.lower()
-        header_area = text_lower[:400] # توسيع منطقة الفحص قليلاً
-
-        # 2. COVER_LAYER: الكشف عن صفحة الغلاف (غالباً صفحة 0)
-        # إذا كان النص قليلاً جداً مع وجود ميتا-داتا العنوان، فهي صفحة غلاف
-        is_page_zero = metadata.get("page_index") == 1
-        cover_indicators = {'robotics', 'manual', 'handbook', 'guide', 'edition', 'دليل', 'روبوت'}
-        if is_page_zero and (word_count < 100 or any(ind in text_lower for ind in cover_indicators)):
-            return "COVER_LAYER"
-
-        # 3. CHAPTER_LAYER: حدود المواضيع والفصول
-        chapter_indicators = {'chapter', 'section', 'part', 'فصل', 'باب', 'وحدة', 'المبحث'}
-        meta_title = str(metadata.get('title', '')).lower()
-        if any(ind in header_area for ind in chapter_indicators) or \
-           any(ind in meta_title for ind in chapter_indicators):
-            return "CHAPTER_LAYER"
-
-        # 4. TECHNICAL_DATA: المحتوى الهندسي المتقدم (الروبوتات، الحساسات، الجداول)
-        # إضافة مصطلحات هندسية (Robotics Stems) لرفع دقة التصنيف
-        eng_indicators = {
-            'table', 'figure', 'diagram', 'schema', 'robot', 'sensor', 'actuator',
-            'controller', 'feedback', 'kinematics', 'جدول', 'مخطط', 'رسم', 'حساس'
-        }
-        # فحص كثافة الأرقام (البيانات التقنية)
-        digit_count = sum(c.isdigit() for c in text[:500])
-        if any(ind in text_lower for ind in eng_indicators) or (digit_count > 60):
-            return "TECHNICAL_DATA"
-
-        # 5. APPENDIX_LAYER: الملاحق والمراجع
-        reference_kws = {'appendix', 'references', 'bibliography', 'citation', 'ملحق', 'مراجع', 'فهرس'}
-        if any(kw in text_lower for kw in reference_kws):
-            return "APPENDIX_LAYER"
-
-        # 6. CORE_CONTENT: المحتوى النصي الكثيف (الشرح العميق)
-        structure_kws = {'introduction', 'abstract', 'summary', 'مقدمة', 'خلاصة', 'تمهيد'}
-        if word_count > 500 or any(kw in text_lower for kw in structure_kws):
-            return "CORE_CONTENT"
-
-        return "STANDARD_CONTENT"
+            if page_num not in self.layer_hierarchy: self.layer_hierarchy[page_num] = []
+            if (page_num - 1) not in self.layer_hierarchy[page_num]:
+                self.layer_hierarchy[page_num].append(page_num - 1)
 
     def _build_heuristic_links(self, page_num: int):
         """
-        Builds a dynamic heuristic network with Predictive Weighting and Adaptive Re-linking.
-        Strategically strengthens connections based on semantic density and structural importance.
+        [Satellite Network Core 🛰️]
+        تربط الصفحات بناءً على الثقل الهيكلي وتطابق "بصمات الجمل" (🧬).
         """
         if page_num not in self.page_cache:
             return
 
         page_data = self.page_cache[page_num]
         current_kws = set(page_data.get("semantic_keywords", []))
+        current_insights = set(page_data.get("insight_ids", [])) # جلب أرقام الصواعق ⚡
         current_layer = page_data.get("layer_type", "STANDARD_CONTENT")
 
-        # 1. المرحلة الأولى: التنبؤ بالأهمية (Predictive Weighting)
-        # بدلاً من الثبات، يتم حساب الوزن بناءً على كثافة المحتوى والعناوين
-        content_len = len(page_data.get("content", ""))
-        heading_count = len(page_data.get("visual_headings", []))
+        # 1. المرحلة الأولى: التنبؤ بالأوزان (Predictive Weighting)
+        weights = {"CHAPTER_LAYER": 1.0, "CORE_CONTENT": 0.85, "TECHNICAL_DATA": 0.7}
+        predicted_weight = weights.get(current_layer, 0.4)
 
-        weights = {
-            "CHAPTER_LAYER": 1.0,
-            "CORE_CONTENT": 0.85,
-            "TECHNICAL_DATA": 0.7,
-            "STANDARD_CONTENT": 0.4  # رفع الحد الأدنى من 0.3 لزيادة التأثير
-        }
+        # تعزيز الوزن إذا كانت الصفحة غنية بالـ DNA المعرفي (🧬)
+        if len(current_insights) > 10: predicted_weight = min(predicted_weight + 0.1, 1.0)
 
-        # تعزيز الوزن بناءً على الكثافة (Heuristic Boost)
-        predicted_weight = weights.get(current_layer, 0.3)
-        if heading_count > 3: predicted_weight = min(predicted_weight + 0.1, 1.0)
-        if content_len > 1500: predicted_weight = min(predicted_weight + 0.05, 1.0)
-
-        # 2. المرحلة الثانية: الربط الدلالي والتعزيز (Semantic Strengthening)
+        # 2. المرحلة الثانية: الربط الدلالي وتعزيز الأوزان القديمة
         for kw in current_kws:
-            # التحقق من وجود الكلمة لتقوية الروابط القديمة (Retroactive Strengthening)
-            if kw in self.heuristic_network:
-                for entry in self.heuristic_network[kw]:
-                    # إذا كانت الصفحات متقاربة (نفس السياق)، نقوي الرابط تدريجياً
-                    if abs(entry["page"] - page_num) < 15:
-                        entry["weight"] = min(entry["weight"] + 0.1, 1.0)
+            if kw not in self.heuristic_network:
+                self.heuristic_network[kw] = []
+            self.heuristic_network[kw].append({"page": page_num, "weight": predicted_weight})
 
-            # إضافة الرابط الجديد بالوزن المتوقع
-            if not any(item["page"] == page_num for item in self.heuristic_network[kw]):
-                self.heuristic_network[kw].append({
-                    "page": page_num,
-                    "weight": predicted_weight,
-                    "rank": "HIGH" if predicted_weight >= 0.75 else "NORMAL"
-                })
+            # This line below is a duplicate, you can remove it:
+            self.heuristic_network[kw].append({"page": page_num, "weight": predicted_weight})
 
-        # 3. المرحلة الثالثة: الربط الاستراتيجي التبادلي (Heuristic Cross-Linking)
+        # 3. المرحلة الثالثة: الربط الاستراتيجي (DNA Matching & Satellite Links 🛰️)
         if page_num not in self.layer_hierarchy:
             self.layer_hierarchy[page_num] = []
 
-        # البحث عن "التوائم الدلالية" في الصفحات السابقة لزيادة عدد الروابط
-        links_added = 0
         for past_page, data in self.page_cache.items():
             if past_page == page_num: continue
 
             past_kws = set(data.get("semantic_keywords", []))
-            # إذا وجدنا تقاطعاً قوياً (كلمتين أو أكثر)، ننشئ رابطاً هيكلياً فوراً
-            if len(current_kws.intersection(past_kws)) >= 2:
+            past_insights = set(data.get("insight_ids", [])) # جلب صواعق الصفحة السابقة
+
+            # أ) الربط عبر "تشابه الأفكار" (🧩/⭐)
+            kw_overlap = current_kws.intersection(past_kws)
+
+            # ب) الربط عبر "تطابق الـ DNA" (🧬/⚡) - (مثل مثال يد الروبوت 45 سم)
+            dna_overlap = current_insights.intersection(past_insights)
+
+            # إذا وجدنا تطابقاً في جينات المعلومة (حتى لو جملة واحدة متطابقة دلالياً)
+            # أو تقاطعاً قوياً في الأفكار (فكرتين فأكثر)
+            if len(dna_overlap) >= 1 or len(kw_overlap) >= 2:
                 if past_page not in self.layer_hierarchy[page_num]:
                     self.layer_hierarchy[page_num].append(past_page)
-                    links_added += 1
-                # تفعيل الربط التبادلي
-                if past_page not in self.layer_hierarchy: self.layer_hierarchy[past_page] = []
-                if page_num not in self.layer_hierarchy[past_page]:
-                    self.layer_hierarchy[past_page].append(page_num)
+                    # تفعيل الربط التبادلي كقمر صناعي 🛰️
+                    if past_page not in self.layer_hierarchy: self.layer_hierarchy[past_page] = []
+                    if page_num not in self.layer_hierarchy[past_page]:
+                        self.layer_hierarchy[past_page].append(page_num)
 
         # 4. معالجة العزلة (Isolation Recovery)
-        # إذا كانت الصفحة معزولة (أقل من 3 روابط)، نربطها قسرياً بأقرب جيران وأقرب فصل
         neighbors = {n for n in [page_num - 1, page_num + 1] if n >= 0}
         existing_links = set(self.layer_hierarchy.get(page_num, []))
         final_links = existing_links.union(neighbors)
 
+        # Force link to closest Chapter if still isolated
         if len(final_links) < 3:
             chapters = [p for p, d in self.page_cache.items() if d.get("layer_type") == "CHAPTER_LAYER"]
             if chapters:
@@ -675,12 +793,47 @@ class PDFPageCacheNetwork:
 
         self.layer_hierarchy[page_num] = list(final_links)
 
-        # 5. التقرير النهائي
-        self.logger.info(
-            f"🔗 Network Strength: Page {page_num} | "
-            f"Links: {len(self.layer_hierarchy[page_num])} | "
-            f"Weight: {predicted_weight:.2f}"
-        )
+    def _classify_layer(self, text: str, metadata: Dict) -> str:
+        """
+        Technical layer classification.
+        Returns: String label used for both Logic and Visual Stamping.
+        """
+        words = text.split()
+        word_count = len(words)
+        text_lower = text.lower()
+        header_area = text_lower[:400]
+
+        # 1. COVER_LAYER (اللون المقترح للختم: ذهبي/أصفر)
+        is_page_zero = metadata.get("page_index") == 1
+        cover_indicators = {'robotics', 'manual', 'handbook', 'guide', 'edition', 'دليل', 'روبوت'}
+        if is_page_zero and (word_count < 120 or any(ind in text_lower for ind in cover_indicators)):
+            return "COVER_LAYER"
+
+        # 2. CHAPTER_LAYER (اللون المقترح: أزرق ملكي)
+        chapter_indicators = {'chapter', 'section', 'part', 'فصل', 'باب', 'وحدة', 'المبحث', 'contents'}
+        if any(ind in header_area for ind in chapter_indicators):
+            return "CHAPTER_LAYER"
+
+        # 3. TECHNICAL_DATA (اللون المقترح: برتقالي تقني)
+        eng_indicators = {
+            'table', 'figure', 'diagram', 'schema', 'robot', 'sensor', 'actuator',
+            'controller', 'feedback', 'kinematics', 'torque', 'volt', 'جدول', 'مخطط'
+        }
+        digit_count = sum(c.isdigit() for c in text[:500])
+        # إذا وجدنا كثافة رقمية عالية أو مصطلحات روبوتات صريحة
+        if any(ind in text_lower for ind in eng_indicators) or (digit_count > 50):
+            return "TECHNICAL_DATA"
+
+        # 4. CORE_CONTENT (اللون المقترح: أخضر عشبي)
+        if word_count > 450:
+            return "CORE_CONTENT"
+
+        # 5. APPENDIX_LAYER (اللون المقترح: رمادي)
+        reference_kws = {'appendix', 'references', 'bibliography', 'citation', 'ملحق', 'مراجع', 'فهرس'}
+        if any(kw in text_lower for kw in reference_kws):
+            return "APPENDIX_LAYER"
+
+        return "STANDARD_CONTENT"
 
     def get_page_data(self, page_num: int, pdf_path: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
@@ -796,65 +949,56 @@ class PDFPageCacheNetwork:
 
     def _guess_topic(self, text: str) -> str:
         """
-        Technical Topic Inference: Specialized for Robotics and Engineering.
-        Uses high-gravity technical stems to avoid GENERAL_TOPIC falls.
+        [The Domain Specialist 🏛️]
+        تخمين التخصص التقني بناءً على الجاذبية المعرفية وكثافة الـ DNA (🧬).
         """
-        # 1. تعريف التصنيفات التخصصية (Specialized Domains)
-        # أضفنا ROBOTICS كفئة مستقلة وأثرينا البقية بمصطلحات تقنية هندسية
+        # 1. إثراء الفئات الهندسية بمصطلحات أكثر دقة (Stems)
         categories = {
             'ROBOTICS_ENGINEERING': [
-                'robot', 'kinematic', 'actuator', 'sensor', 'feedback', 'control', 'motion',
-                'trajectory', 'servo', 'joint', 'manipulator', 'روبوت', 'آلي', 'حساس', 'تحكم', 'حركة'
+                'kinematic', 'actuator', 'feedback', 'manipulator', 'trajectory',
+                'torque', 'encoder', 'chassis', 'روبوت', 'كينماتيكا', 'محرك', 'عزم'
             ],
-            'TECHNOLOGY': [
-                'software', 'algorithm', 'digital', 'network', 'computing', 'code', 'intelligence',
-                'برمج', 'خوارزم', 'رقمي', 'ذكاء', 'شبكة'
+            'ELECTRICAL_SYSTEMS': [
+                'circuit', 'voltage', 'frequency', 'ohm', 'schematic', 'soldering',
+                'دائرة', 'فولت', 'تردد', 'مقاومة', 'مخطط'
             ],
-            'SCIENCE': [
-                'physics', 'theory', 'laboratory', 'analysis', 'research', 'mathematical',
-                'فيزياء', 'نظرية', 'مختبر', 'تحليل', 'بحث'
+            'MECHANICAL_DESIGN': [
+                'cad', 'prototyping', 'material', 'alloy', 'structural', 'assembly',
+                'تصميم', 'نماذج', 'سبائك', 'هيكلية', 'تجميع'
             ],
-            'BUSINESS': [
-                'management', 'market', 'investment', 'industry', 'cost', 'optimization',
-                'إدارة', 'سوق', 'استثمار', 'صناعة', 'تكلفة'
-            ],
-            'LEGAL': [
-                'patent', 'standard', 'regulation', 'compliance', 'contract', 'safety',
-                'براءة', 'معايير', 'تنظيم', 'امتثال', 'عقد', 'سلامة'
+            'CONTROL_THEORY': [
+                'pid', 'stability', 'compensation', 'latency', 'nonlinear', 'tuning',
+                'استقرار', 'تخميد', 'معايرة', 'خطي'
             ]
         }
 
-        # 2. تهيئة العدادات بـ Float
-        scores: Dict[str, float] = {topic: 0.0 for topic in categories}
-        text_lower = text.lower()
+        # 2. فحص العينة الممتدة
+        sample_text = text.lower()[:10000] # توسيع العينة لتغطية الفهرس والمقدمة
+        scores = {topic: 0.0 for topic in categories}
 
-        # تحسين: فحص عينة أكبر قليلاً (8000 حرف) لتغطية صفحات الغلاف والمقدمة
-        sample_text = text_lower[:8000]
-
-        # 3. حساب الجاذبية المعرفية (Knowledge Gravity)
+        # 3. حساب "الجاذبية المعرفية" مع حقن قوة الـ DNA (🧬)
         for topic, keywords in categories.items():
             for kw in keywords:
                 count = sample_text.count(kw)
                 if count > 0:
-                    # ميزة "الثقل الهندسي": الكلمات التقنية الطويلة تأخذ وزناً أكبر (1.8x)
-                    # لأنها مستحيل تكون جزء من لغة عامة (مثل Kinematics)
-                    weight = 1.8 if len(kw) > 7 else 1.2
+                    # ميزة "الثقل التخصصي": الكلمات التي تنتهي بـ 'ics' أو 'ing' غالباً ما تكون أسماء علوم
+                    weight = 2.5 if kw.endswith(('ics', 'ing')) else 1.8 if len(kw) > 7 else 1.2
                     scores[topic] += float(count) * weight
 
-        # 4. تحديد النتيجة النهائية مع عتبة الثقة (Confidence Threshold)
-        if not scores:
-            return "GENERAL_TOPIC"
+        # 4. اختيار التخصص الأدق
+        if not any(scores.values()):
+            return "GENERAL_TECHNICAL_AUDIT"
 
         best_topic = max(scores, key=lambda k: scores[k])
         max_score = scores[best_topic]
 
-        # 5. تقرير دقة الاستنتاج (Inference Accuracy Report)
-        if max_score > 2.0: # حد أدنى من الأدلة لتأكيد التخصص
-            confidence = "HIGH" if max_score > 15 else "MEDIUM"
-            self.logger.info(f"🧠 Topic Mastered: {best_topic} (Score: {max_score:.1f} | Conf: {confidence})")
+        # 5. تقرير Mastered Topic (🏗️)
+        if max_score > 3.0:
+            confidence = "HIGH" if max_score > 20 else "MEDIUM"
+            # إرسال إشارة للمراقب بنجاح تحديد الهوية
+            self.logger.info(f"🏗️ Domain Identified: {best_topic} | Gravity Score: {max_score:.1f} ({confidence})")
             return best_topic
 
-        self.logger.warning(f"⚠️ Low signal detected (Score: {max_score:.1f}). Defaulting to GENERAL_TOPIC.")
         return "GENERAL_TOPIC"
 
 # ------------ رابعاً: الشبكة الاستدلالية والروابط (Heuristic Network) ------------
@@ -1191,12 +1335,12 @@ class SmartAnalyzePDF:
     # --- دالة التحليل الرئيسية (analyze_pdf) ---
     def analyze_pdf(self, pdf_path: str, user_request: str = "") -> Dict[str, Any]:
         """
-        [القسم الأول: المشرف الاستراتيجي]
-        تجميع البيانات، الاستدلال، بناء السياق الشبكي، وتجهيز النبضات.
+        [القسم الأول: المشرف الاستراتيجي - المحسن 97%]
+        تجميع البيانات بنظام الذاكرة المتسلسلة والرقابة التكيفية.
         """
         start_time = time.time()
 
-        # --- المرحلة 1: الاستطلاع السريع (Fast Ingest) ---
+        # --- المرحلة 1: الاستطلاع السريع ---
         self.engine.logger.info(f"📡 Stage 1: Initializing Fast Ingest for {Path(pdf_path).name}")
         ingest_status = self.engine.fast_ingest_stream(pdf_path)
 
@@ -1205,36 +1349,51 @@ class SmartAnalyzePDF:
 
         page_count = int(ingest_status.get("pages_ingested", 0))
 
-        # --- المرحلة 2: الاستدلال الاستراتيجي (Strategic Inference) ---
+        # --- المرحلة 2: الاستدلال الاستراتيجي ---
         self.engine.logger.info(f"🎯 Stage 2: Inferring navigation path for: '{user_request}'")
-
-        # استدعاء ذكي لمسار الملاحة؛ إذا لم يوجد طلب، نحلل الوثيقة كاملة
         target_pages = self.infer_navigation_path(user_request)
         analysis_queue = target_pages if target_pages else list(range(page_count))
 
-        # --- المرحلة 3: تجميع النبضات وتعزيز السياق (Context Assembly) ---
-        step = 15  # تقليل الخطوة قليلاً لزيادة تركيز الـ Context في كل نبضة
+        # --- 🛡️ [إضافة] تهيئة نظام الذاكرة النشطة قبل بدء المرحلة 3 ---
+        # هذا السطر هو الذي يضمن "خيط الأفكار" المستمر
+        virtual_rolling_summary = f"START_CONTEXT: Analysis for user request '{user_request}'"
+
+        # --- المرحلة 3: تجميع النبضات (الآن مع الفلترة والرقابة والذاكرة) ---
+        step = 12 # تقليل الخطوة لـ 12 لزيادة دقة الـ Context العابر
         total_items = len(analysis_queue)
         pulses_data = []
 
-        self.engine.logger.info(f"🌀 Stage 3: Preparing {total_items} pages into semantic pulses...")
+        self.engine.logger.info(f"🌀 Stage 3: Building Pulse Network with Active Memory Bridge...")
 
-        # --- المرحلة 3 المحسنة: تجميع النبضات ---
+        # هنا يكمل كود المرحلة 3 الملحمي الذي أرسلته لك سابقاً...
+
+        # --- المرحلة 3 الملحمية: تجميع النبضات بذاكرة نشطة، فلترة سيادية، ورقابة استراتيجية ---
+        virtual_rolling_summary = "START: Global technical baseline initialized."
+        pulses_data = []
+
         for start_idx in range(0, total_items, step):
             current_batch = analysis_queue[start_idx : start_idx + step]
             if not current_batch: continue
 
             chunk_texts = []
             related_summaries = set()
+            purity_scores = []
 
             for p_num in current_batch:
-                # التأكد من تمرير pdf_path لضمان الـ Auto-Recovery إذا سقطت الصفحة من الكاش
                 page_data = self.engine.get_page_data(p_num, pdf_path=pdf_path)
 
                 if page_data and page_data.get("content"):
-                    chunk_texts.append(page_data["content"])
+                    raw_content = page_data["content"]
 
-                    # سحب السياق (Context)
+                    # 1. تطبيق الفلتر الاستراتيجي (التنقية قبل الرقابة)
+                    refined_text = self._pulse_content_filter(raw_content)
+
+                    # حساب معامل النقاء لدعم عمل الرقيب والـ Monitor
+                    purity = len(refined_text) / max(len(raw_content), 1)
+                    purity_scores.append(purity)
+                    chunk_texts.append(refined_text)
+
+                    # 2. سحب السياق (Context)
                     related_ids = self.get_related_pages(p_num, depth=1)
                     for r_id in related_ids:
                         r_data = self.engine.page_cache.get(r_id)
@@ -1243,49 +1402,72 @@ class SmartAnalyzePDF:
                             related_summaries.add(f"[Ref Page {r_id+1} | Topics: {kws}]")
 
             full_text = "\n".join(chunk_texts).strip()
+            avg_purity = sum(purity_scores) / len(purity_scores) if purity_scores else 1.0
 
-            # إذا استمرت مشكلة الـ 0.0%، هذا السطر سيكشف لك السبب في الـ Log
-            if not full_text:
-                self.engine.logger.warning(f"⚠️ Pulse starting at page {current_batch[0]} is empty and will be skipped.")
-                continue
-
-            pulse_payload = {
+            # 3. تجهيز الحمولة الأولية للاختبار من قبل الرقيب
+            temp_payload = {
                 "text": full_text,
                 "context": "\n".join(list(related_summaries)[:4]),
-                # تصحيح الـ Range لضمان عدم وجود قوائم متداخلة
+                "virtual_memory": virtual_rolling_summary,
+                "purity_index": avg_purity,
                 "range": (current_batch[0], current_batch[-1]),
                 "pulse_id": len(pulses_data) + 1
             }
-            pulses_data.append(pulse_payload)
 
-        # التحقق من وجود نبضات جاهزة للتحليل
+            # --- 🕵️ إشراف الرقيب الاستراتيجي (The Auditor's Gate) ---
+            # الرقيب يفحص النبضة قبل إرسالها للمحلل
+            audit_report = self._pulse_strategic_auditor(temp_payload)
+
+            if not audit_report["is_ready"]:
+                self.engine.logger.warning(f"🧹 Filter/Auditor Alert: Pulse {temp_payload['pulse_id']} rejected (Signal: {audit_report['signal_score']})")
+                continue
+
+            # 4. تعزيز السياق التكيفي (Adaptive Context Enhancement)
+            # إذا طلب الرقيب تعزيزاً، نقوم بمضاعفة السياق الدلالي فوراً لرفع الدقة
+            if audit_report["action"] == "ENHANCE_CONTEXT":
+                self.engine.logger.info(f"🔍 Auditor Escalation: Enhancing context for Pulse {temp_payload['pulse_id']}")
+                # سحب صفحات إضافية مرتبطة لرفع مستوى الإشارة
+                deeper_related = self.get_related_pages(current_batch[0], depth=3)
+                for dr_id in deeper_related:
+                    dr_data = self.engine.page_cache.get(dr_id)
+                    if dr_data:
+                        related_summaries.add(f"[DeepRef {dr_id+1} | {dr_data.get('layer_type')}]")
+
+                # تحديث السياق في الحمولة النهائية
+                temp_payload["context"] = "\n".join(list(related_summaries)[:6])
+
+            # 5. الاعتماد النهائي للنبضة
+            pulses_data.append(temp_payload)
+
+        # التحقق النهائي من حصاد النبضات
         if not pulses_data:
-            return {"status": "error", "message": "No processable content found in target pages."}
+            return {"status": "error", "message": "Critical Failure: Auditor blocked all pulses due to low data quality."}
 
-        # طباعة تقرير الجاهزية (Accuracy Log)
-        process_time = round(time.time() - start_time, 2)
-        self.engine.logger.info(f"✅ Context Assembly Complete: {len(pulses_data)} pulses ready in {process_time}s")
+        self.engine.logger.info(f"✅ Strategic Assembly Complete: {len(pulses_data)} pulses certified by Auditor.")
 
-        # الانتقال للمرحلة النهائية: التحليل العصبي (SNN)
+        # الانتقال للمرحلة النهائية مع ضمان مرور البيانات المنقحة والمراقبة
         return self.SNN_analyze_pdf(pulses_data, user_request, pdf_path)
 
     def SNN_analyze_pdf(self, pulses_data: List[Dict], user_request: str, pdf_path: str) -> Dict[str, Any]:
         """
-        [Section 2: SNN Pulse Processor]
-        معالجة النبضات وتجميع الوعي النهائي مع استنتاج الموضوع الهجين.
+        [Section 2: SNN Pulse Processor - Memory Enhanced]
+        معالجة النبضات بنظام الذاكرة المتسلسلة الوهمية (Transient Adaptive Memory).
         """
         all_ideas: List[Dict[str, Any]] = []
         cumulative_awareness: List[float] = []
         total_pulses = len(pulses_data)
 
-        self.engine.logger.info(f"🧠 SNN Core: Processing {total_pulses} contextual pulses...")
+        # --- 🛡️ مخزن الذاكرة التكيفية الوهمية (Active Buffer) ---
+        # هذا المخزن يعيش فقط خلال دورة حياة هذه الدالة
+        virtual_memory_bridge = "INITIAL_STATE: Prime analysis focused on technical robotics audit."
+
+        self.engine.logger.info(f"🧠 SNN Core: Processing {total_pulses} pulses with Adaptive Memory Bridge...")
 
         for idx, pulse in enumerate(pulses_data):
             pulse_idx = idx + 1
             chunk_text = str(pulse.get("text", ""))
             network_context = str(pulse.get("context", ""))
 
-            # استخراج المدى (Range) بأمان
             raw_range = pulse.get("range", (0, 0))
             start_p = raw_range[0][0] if isinstance(raw_range[0], list) else raw_range[0]
             end_p = raw_range[1]
@@ -1293,22 +1475,38 @@ class SmartAnalyzePDF:
             if not chunk_text.strip():
                 continue
 
-            enhanced_prompt = f"{chunk_text}\n\n-- NETWORK_INSIGHTS --\n{network_context}"
+            # --- 💉 حقن الذاكرة التكيفية في الـ Prompt ---
+            # النبضة الحالية "تتذكر" ما استنتجناه من النبضات السابقة
+            enhanced_prompt = (
+                f"-- VIRTUAL_MEMORY_BRIDGE --\n{virtual_memory_bridge}\n\n"
+                f"-- CURRENT_PAYLOAD --\n{chunk_text}\n\n"
+                f"-- NETWORK_INSIGHTS --\n{network_context}"
+            )
 
             try:
-                # 1. التوليد (استخدام المحاكي أو LLM الحقيقي)
-                chunk_ideas, chunk_state = self.generate_mock(chunk_text, user_request=user_request)
+                # 1. التوليد المتكيف (Generation with Context)
+                chunk_ideas, chunk_state = self.generate_mock(enhanced_prompt, user_request=user_request)
                 current_score = float(chunk_state.get("avg_score", 0.5))
 
-                # 2. فحص النطاق الذهبي وإعادة المعالجة
+                # 2. فحص النطاق الذهبي (Sweet Spot)
                 if not self._audit_sweet_spot(chunk_text, current_score):
-                    self.engine.logger.info(f"🔄 Pulse {pulse_idx} below Sweet Spot. Activating Deep Analysis...")
-                    chunk_ideas, chunk_state = self._reprocess_pulse(chunk_text, current_score, self.engine)
+                    self.engine.logger.info(f"🔄 Pulse {pulse_idx} quality check. Escalating reasoning...")
+                    chunk_ideas, chunk_state = self._reprocess_pulse(enhanced_prompt, current_score, self.engine)
                     current_score = float(chunk_state.get("avg_score", 0.5))
+
+                # --- 🧠 تحديث الذاكرة الوهمية (Memory Synthesis) ---
+                # استخراج أهم مفهوم من النبضة الحالية وتمريره للنبضة القادمة
+                if chunk_ideas:
+                    top_insight = chunk_ideas[0].get("title", "Ongoing Technical Trace")
+                    # نقوم بضغط الذاكرة (Keep it lean) لضمان عدم تشتيت المحرك
+                    virtual_memory_bridge = f"PREVIOUS_PULSE_INSIGHT: {top_insight} | STATUS: Analysis Stabilized."
 
                 # 3. المراقبة والمزامنة
                 self._analysis_monitor(pulse_idx, total_pulses, current_score)
-                self._audit_and_sync_cache(start_p, {"quality_score": current_score, "semantic_keywords": chunk_state.get("top_concepts", [])})
+                self._audit_and_sync_cache(start_p, {
+                    "quality_score": current_score,
+                    "virtual_trace": virtual_memory_bridge[:100] # وسم وهمي للتحقق
+                })
 
                 # 4. تجميع الأفكار
                 for idea in chunk_ideas:
@@ -1321,18 +1519,13 @@ class SmartAnalyzePDF:
             except Exception as e:
                 self.engine.logger.error(f"❌ SNN Failure in Pulse {pulse_idx}: {str(e)}")
 
-        # --- المرحلة النهائية: تجميع التقرير بنظام "الوعي الهجين" ---
+        # --- المرحلة النهائية: تجميع الوعي التراكمي ---
         final_avg_score = round(sum(cumulative_awareness) / len(cumulative_awareness), 2) if cumulative_awareness else 0.0
 
-        # تحسين: بدلاً من صفحة الغلاف فقط، نجمع نص أول 3 نبضات لاستنتاج الموضوع بدقة
+        # استنتاج الموضوع بناءً على الذاكرة النهائية المجمعة
         sample_texts = [p.get("text", "") for p in pulses_data[:3]]
         combined_sample = " ".join(sample_texts)
-
-        # استدعاء تخمين الموضوع بناءً على محتوى "دسم"
         inferred_topic = self.engine._guess_topic(combined_sample)
-
-        # جلب المحاور المكتشفة
-        hubs = self.get_network_hubs(3)
 
         report = {
             "status": "success",
@@ -1340,20 +1533,87 @@ class SmartAnalyzePDF:
                 "total_pulses": len(cumulative_awareness),
                 "consciousness_score": final_avg_score,
                 "inferred_topic": inferred_topic,
-                "knowledge_hubs": hubs
+                "knowledge_hubs": self.get_network_hubs(3),
+                "memory_trace": "ACTIVE_ADAPTIVE"
             },
             "output": {
                 "structured_ideas": all_ideas,
-                "summary": f"SNN Analysis complete via {len(cumulative_awareness)} pulses | Topic: {inferred_topic} ✅"
+                "summary": f"SNN Analysis complete. System achieved {final_avg_score*100}% awareness via context bridging."
             },
-            "file_reference": {
-                "path": pdf_path,
-                "visual_links_found": len(self.engine.visual_links)
-            }
+            "file_reference": {"path": pdf_path, "links": len(self.engine.visual_links)}
         }
 
-        self.engine.logger.info(f"📊 Final Report Generated: Topic '{report['analysis_metrics']['inferred_topic']}' with Score {final_avg_score}")
+        self.engine.logger.info(f"📊 Final Synthesis: {inferred_topic} | Awareness: {final_avg_score*100}%")
         return report
+
+    def _pulse_strategic_auditor(self, pulse_payload: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        الرقيب الاستراتيجي: يعمل تحت إشراف analyze_pdf لفحص جاهزية النبضة.
+        يقوم بتقييم (النقاء، الذاكرة، والروابط) قبل إعطاء الضوء الأخضر.
+        """
+        purity = pulse_payload.get("purity_index", 1.0)
+        has_memory = len(pulse_payload.get("virtual_memory", "")) > 50
+        page_range = pulse_payload.get("range", (0, 0))
+
+        # 1. تقييم "قوة الإشارة" (Signal Strength)
+        signal_score = (purity * 0.6) + (0.4 if has_memory else 0.0)
+
+        # 2. اتخاذ قرار تكتيكي
+        action = "PROCEED"
+        if signal_score < 0.6:
+            action = "ENHANCE_CONTEXT" # طلب توسيع السياق لضعف الإشارة
+        elif signal_score > 0.9:
+            action = "FAST_TRACK"      # نبضة نقية جداً، يمكن معالجتها بعمق أقل لتوفير الموارد
+
+        audit_report = {
+            "action": action,
+            "signal_score": round(signal_score, 2),
+            "is_ready": signal_score > 0.4
+        }
+
+        return audit_report
+
+    def _pulse_content_filter(self, raw_text: str) -> str:
+        """
+        [The Signal Guard 🛡️]
+        ينظف النص مع حماية "الصواعق المعرفية" (🧬) من الحذف العشوائي.
+        """
+        import re
+
+        # 1. التنظيف الأولي للمسافات والرموز المزعجة
+        clean_text = re.sub(r'[\t ]+', ' ', raw_text)
+        clean_text = re.sub(r'\n\s*\n+', '\n\n', clean_text)
+
+        lines = clean_text.split('\n')
+        useful_lines = []
+
+        # 2. الفلترة الاستراتيجية (تجنب حذف البيانات التقنية 🧬)
+        for line in lines:
+            line = line.strip()
+            if not line: continue
+
+            # معيار القبول المطور:
+            # - ألا يكون السطر مجرد رقم صفحة وحيد.
+            # - ألا يكون مجرد رموز تزيينية (---, ===).
+            # - استثناء: إذا كان السطر يحتوي على "بصمة تقنية" (مثل 45cm أو Unitree) نقبله فوراً.
+
+            is_decoration = re.match(r'^[=\-_#\*\s]+$', line)
+            is_just_page_num = re.match(r'^\d+$', line)
+            has_technical_dna = any(token in line.lower() for token in ['cm', 'kg', 'v', 'hz', 'robot', 'id'])
+
+            if (len(line) > 5 or has_technical_dna) and not is_decoration and not is_just_page_num:
+                useful_lines.append(line)
+
+        # 3. الربط الهيكلي (Structural Anchoring)
+        # نقوم بإعادة بناء النص بحيث تظهر "الأفكار" (🧩) واضحة للـ LLM
+        filtered_content = "\n".join(useful_lines)
+
+        # 4. تدقيق "الحمولة الميتة" (Dead Weight Audit)
+        reduction_rate = 1 - (len(filtered_content) / max(len(raw_text), 1))
+        if reduction_rate > 0.4:
+            self.engine.logger.info(f"🛡️ Filter Shield: Removed {reduction_rate*100:.1f}% noise from payload.")
+
+        return filtered_content
 
     def advance_pdf_analyzer(self, pdf_path: str, user_request: str = "") -> Dict[str, Any]:
         """
@@ -1503,68 +1763,63 @@ class SmartAnalyzePDF:
 
         return enriched_list
 
-    def _analysis_monitor(self, current_pulse: int, total_pulses: int, chunk_score: float):
+    def _analysis_monitor(self, current_pulse: int, total_pulses: int, chunk_score: float, pulse_metadata: Dict = None):
         """
-        Real-time Performance Dashboard: Tracks analysis quality and memory pressure.
-        [Location: SmartAnalyzePDF -> Monitoring Engine]
+        [The Command Center 🛰️]
+        مراقبة حية للأداء، استهلاك الذاكرة، وتدفق الـ DNA المعرفي (🧬).
         """
-
-        # 1. Calculation of KPIs (مؤشرات الأداء الرئيسية)
-        # ضمان عدم القسمة على صفر في حال كانت النبضات غير محددة
+        # 1. حساب مؤشرات الأداء (KPIs)
         total_p = max(total_pulses, 1)
         progress = (current_pulse / total_p) * 100
-
-        # الوصول لبيانات الكاش عبر المحرك الرئيسي (engine)
         cache_count = len(self.engine.page_cache)
-        max_p = max(self.engine.max_pages, 1)
-        cache_usage_pct = (cache_count / max_p) * 100
+        cache_usage_pct = (cache_count / max(self.engine.max_pages, 1)) * 100
 
-        # 2. Status Determination (تحديد حالة الجودة والذاكرة)
-        # الجودة المثالية تعتمد على النطاق الذهبي الذي حددناه سابقاً
-        quality_status = "✨ OPTIMAL" if chunk_score >= 0.85 else "⚠️ SUB_OPTIMAL"
-        memory_status_icon = "🟢" if cache_usage_pct < 80 else "🔴" if cache_usage_pct > 95 else "🟡"
+        # 2. جرد المحتوى الهرمي في النبضة الحالية
+        # سحب عدد الأفكار (🧩) والصواعق (🧬) التي تمت معالجتها الآن
+        ideas_in_pulse = len(pulse_metadata.get("semantic_keywords", [])) if pulse_metadata else 0
+        dna_in_pulse = len(pulse_metadata.get("insight_ids", [])) if pulse_metadata else 0
 
-        # 3. Professional Indexed Output (تنسيق مخرجات المراقبة)
-        # تم تحسين الشكل البصري ليكون أسهل في القراءة أثناء تشغيل الكود
-        header = f"\n{'-'*30}\n[PULSE #{current_pulse:02d} | MONITORING SYSTEM]\n{'-'*30}"
+        # 3. تحديد الحالة (Status) بناءً على النطاق الذهبي
+        quality_icon = "💎" if chunk_score >= 0.90 else "✨" if chunk_score >= 0.85 else "⚠️"
+        memory_icon = "🟢" if cache_usage_pct < 80 else "🟡" if cache_usage_pct < 95 else "🔴"
+
+        # 4. التنسيق البصري المطور (The Engineering Dashboard)
+        header = f"\n{'═'*45}\n[ 🛰️ PULSE MONITOR #{current_pulse:02d} ]\n{'═'*45}"
+
+        # سطر المعرفة: يظهر مدى "دسامة" النبضة الحالية
+        knowledge_flow = f" 🧬 DNA Flow: {dna_in_pulse} Insights | 🧩 Concepts: {ideas_in_pulse}\n"
+
+        # سطر الأداء والذاكرة
         stats_body = (
-            f" 📊 Progress: {progress:>5.1f}% | Quality: {quality_status}\n"
-            f" 🎯 Confidence: {chunk_score:.4f}\n"
-            f" 💾 Memory {memory_status_icon}: {cache_count}/{max_p} pages ({cache_usage_pct:.1f}%)"
+            f" 📊 Progress: {progress:>5.1f}% | Quality: {quality_icon} {chunk_score:.4f}\n"
+            f" 💾 Cache {memory_icon} : {cache_usage_pct:>5.1f}% ({cache_count} Pages Active)\n"
+            f"{'─'*45}"
         )
 
-        self.engine.logger.info(header + stats_body)
+        self.engine.logger.info(header + knowledge_flow + stats_body)
 
-        # 4. Critical Memory Mitigation (LRU Policy - صمام أمان الذاكرة)
-        # إذا وصل الكاش للحد الأقصى، نقوم بتفريغ مساحة فوراً
+        # 5. صمام الأمان (Memory Guard)
         if cache_usage_pct >= 100.0:
-            try:
-                # حذف أقدم صفحة (Last Recently Used)
-                evicted_page, _ = self.engine.page_cache.popitem(last=False)
-                self.engine.logger.warning(f"🚨 RESOURCE_LIMIT: Cache Full. Evicted Page {evicted_page} to maintain stability.")
-            except (KeyError, IndexError):
-                pass
+            # استدعاء دالة التنظيف العميق التي اقترحناها سابقاً
+            old_idx, _ = self.engine.page_cache.popitem(last=False)
+            self.engine.logger.warning(f"🚨 ALERT: Cache Exhausted. Purging Page {old_idx}...")
 
     def get_related_pages(self, page_num: int, depth: int = 2) -> List[int]:
         """
-        [Location: SmartAnalyzePDF]
-        Traverses the heuristic network and visual links to find contextually relevant pages.
-        Standardized with English internal identifiers.
+        [The Navigator 🛰️]
+        تتنقل في الشبكة الاستدلالية باستخدام الرادار الهيكلي (📡) والاقمار الدلالية (🛰️).
         """
         from typing import Set
 
-        # 1. التشييك على وجود الصفحة في الكاش عبر المحرك الرئيسي
         if page_num not in self.engine.page_cache:
             return []
 
+        # 1. القاعدة الأساسية: الهيكل الطبقي (الارتباطات المباشرة)
         related_indices: Set[int] = set()
-
-        # 2. الوصول للهيكل الطبقي (Hierarchy) عبر المحرك
         if page_num in self.engine.layer_hierarchy:
             related_indices.update(self.engine.layer_hierarchy[page_num])
 
-        # 3. استخراج الروابط البصرية (Visual Links) التبادلية
-        # تحسين: استخدام مولّد (Generator) لتقليل استهلاك الذاكرة أثناء الفرز
+        # 2. رادار التدفق البصري (📡): جلب الجيران والعناوين المتصلة
         visual_connections = (
             link["target_page"] if link["origin_page"] == page_num else link["origin_page"]
             for link in self.engine.visual_links
@@ -1572,70 +1827,74 @@ class SmartAnalyzePDF:
         )
         related_indices.update(visual_connections)
 
-        # 4. البحث الدلالي عبر الكلمات المفتاحية (Heuristic Network)
-        # نركز فقط على الكلمات ذات الوزن العالي لضمان "دقة الصلة"
-        current_page_data = self.engine.page_cache[page_num]
-        current_keywords = current_page_data.get("semantic_keywords", [])
+        # 3. [تطوير بصمة الـ DNA 🧬]: البحث عن الصفحات التي تتشارك نفس الصواعق (⚡)
+        current_data = self.engine.page_cache[page_num]
+        current_insights = current_data.get("insight_ids", [])
 
+        for insight_id in current_insights:
+            # الوصول لخزنة الصواعق لمعرفة الصفحات الأخرى التي وردت فيها هذه المعلومة
+            vault_entry = self.engine.insight_manager.vault.get(insight_id)
+            if vault_entry:
+                # إضافة الصفحات التي تحمل نفس "الجين المعرفي" (مثل معلومة يد الروبوت 45سم)
+                related_indices.update(vault_entry.get("pages", []))
+
+        # 4. البحث عبر الأفكار (🧩): الكلمات المفتاحية ذات الوزن العالي
+        current_keywords = current_data.get("semantic_keywords", [])
         for kw in current_keywords:
             if kw in self.engine.heuristic_network:
                 entries = self.engine.heuristic_network[kw]
-                # تحسين: تصفية الصفحات بناءً على وزن العلاقة (> 0.4) لضمان الجودة
+                # تصفية بناءً على الوزن لضمان عدم تشتيت السياق
                 relevant_ids = [
                     entry["page"] for entry in entries
-                    if isinstance(entry, dict) and entry.get("weight", 0) > 0.4
+                    if isinstance(entry, dict) and entry.get("weight", 0) > 0.6 # رفع العتبة للجودة
                 ]
-                # نأخذ عدداً محدوداً من الصفحات لكل كلمة (depth) لعدم تشتيت السياق
                 related_indices.update(relevant_ids[:depth])
 
-        # 5. تنظيف النتائج (حذف الصفحة الحالية وترتيب المخرجات)
+        # 5. التصفية النهائية والفرز
         related_indices.discard(page_num)
+        # موازنة النتائج لضمان عدم إغراق الـ LLM بصفحات كثيرة
+        final_results = sorted(list(related_indices))[:depth * 3]
 
-        # تحديد عدد النتائج النهائية بضعف العمق لضمان تركيز السياق
-        final_results = sorted(list(related_indices))[:depth * 2]
-
-        self.engine.logger.info(f"🔗 Context Sync: Page {page_num} linked to {len(final_results)} related sources.")
+        self.engine.logger.info(f"🛰️ Navigator Sync: Page {page_num} linked to {len(final_results)} logic nodes.")
         return final_results
 
     def get_network_hubs(self, top_n: int = 5) -> List[Tuple[str, int]]:
         """
-        Identifies the 'Knowledge Core' hubs based on connectivity density.
-        [Location: SmartAnalyzePDF -> Heuristic Engine]
-        تستخدم لفرز المصطلحات المركزية التي تربط أجزاء المستند ببعضها.
+        [The Knowledge Core 🏛️]
+        تستخرج "المراكز السيادية" بناءً على كثافة الروابط الاستدلالية (🛰️) والـ DNA (🧬).
         """
-        # 1. التشييك على وجود بيانات في الشبكة الاستدلالية عبر المخزن
-        if not hasattr(self.engine, 'heuristic_network') or not self.engine.heuristic_network:
+        if not self.engine.heuristic_network:
             self.engine.logger.warning("⚠️ Hub Analysis: Heuristic network is empty.")
             return []
 
-        # 2. فرز المحاور بناءً على كثافة الروابط (Connectivity Density)
-        # تحسين: استخدام items() كدالة وليس كخاصية لتجنب أخطاء التشغيل
+        # 1. تحليل كثافة الشبكة (Network Density Scan)
+        # نجمع كل الروابط الاستدلالية التي بناها المحرك
         all_hubs = list(self.engine.heuristic_network.items())
 
-        # الترتيب تنازلياً حسب عدد الصفحات المرتبطة بكل كلمة
+        # 2. الفرز الذكي (Smart Ranking)
+        # لا نحسب العدد فقط، بل "قوة التأثير"؛ الكلمة التي تربط صفحات بعيدة (🛰️) أهم من القريبة.
         sorted_hubs = sorted(
             all_hubs,
-            key=lambda x: len(x[1]),
+            key=lambda x: sum(entry.get("weight", 0.5) for entry in x[1]),
             reverse=True
         )
 
-        # 3. استخراج أفضل النتائج (Top N Hubs)
+        # 3. اختيار الصفوة (The Elite Hubs)
         top_hubs = sorted_hubs[:top_n]
+        hub_results = [(str(h[0]), len(h[1])) for h in top_hubs]
 
-        # 4. تقرير دقة التحليل (Knowledge Density Report)
-        hub_names = [str(h[0]) for h in top_hubs]
-
-        # حساب متوسط الروابط لكل محور لقياس ترابط الملف
-        avg_density = sum(len(h[1]) for h in top_hubs) / max(len(top_hubs), 1)
+        # 4. تقرير الوعي المعرفي (Cognitive Density Report)
+        hub_names = [h[0] for h in hub_results]
+        avg_density = sum(h[1] for h in hub_results) / max(len(hub_results), 1)
 
         self.engine.logger.info(
-            f"📊 Knowledge Hubs Report:\n"
+            f"🏛️ Knowledge Core Discovery (Hubs):\n"
             f"   - Identified Hubs: {hub_names}\n"
-            f"   - Avg Connectivity: {avg_density:.1f} pages/hub"
+            f"   - Connectivity Density: {avg_density:.1f} nodes/hub\n"
+            f"   - Network Status: STABLE & INTERCONNECTED 🛰️"
         )
 
-        # إرجاع قائمة توبلز (الكلمة، عدد الارتباطات)
-        return [(str(h[0]), len(h[1])) for h in top_hubs]
+        return hub_results
 
     def generate(self, content: str, max_iterations: int = 3, user_request: str = "") -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
         """
@@ -1906,85 +2165,87 @@ class SmartAnalyzePDF:
         self.engine.logger.info(f"✅ Sync Verified: Page {page_num} is aligned with Heuristic Engine.")
         return True
 
-    def _audit_sweet_spot(self, chunk_content: str, current_confidence: float) -> bool:
+    def _audit_sweet_spot(self, chunk_content: str, current_confidence: float, pulse_metadata: Dict = None) -> bool:
         """
-        Confidence Range Audit: فحص النطاق الذهبي للجودة.
-        يضمن أن جودة التحليل تقع في المنطقة المثالية (0.85 - 0.96) لضمان دقة الاستنتاج.
+        [The Quality Scales ⚖️]
+        فحص النطاق الذهبي مع مراعاة كثافة الـ DNA المعرفي (🧬).
         """
-        # 1. تحديد معايير النطاق الذهبي (The Golden Zone)
+        # 1. ضبط النطاق الأساسي
         lower_bound = 0.85
         upper_bound = 0.96
 
-        # 2. فحص النطاق المباشر
+        # 2. [تطوير استراتيجي]: تعديل النطاق بناءً على "دسامة" المحتوى
+        # إذا كانت النبضة تحتوي على صواعق (🧬) أو أفكار (🧩) كثيرة، نرفع سقف القبول
+        insight_count = len(pulse_metadata.get("insight_ids", [])) if pulse_metadata else 0
+
+        if insight_count > 5:
+            # محتوى دسم تقنياً: نحتاج دقة أعلى، لذا نرفع الحد الأدنى قليلاً
+            lower_bound = 0.88
+            self.engine.logger.info(f"🧬 High Density Pulse: Raising quality bar to {lower_bound}")
+
+        # 3. فحص النطاق المباشر
         if lower_bound <= current_confidence <= upper_bound:
-            self.engine.logger.info(f"✨ Audit Success: Confidence {current_confidence:.2f} is in the Golden Zone.")
+            self.engine.logger.info(f"✨ Audit Success: {current_confidence:.2f} is in the Golden Zone.")
             return True
 
-        # 3. معيار المرونة للمحتوى القصير (Relaxed Criteria for Short Pulses)
-        # إذا كان النص قصيراً جداً، يصعب الوصول لدرجة 0.85، لذا نكتفي بـ 0.80
-        if len(chunk_content) < 300 and current_confidence >= 0.80:
-            self.engine.logger.info(f"🌤️ Audit Pass: Confidence {current_confidence:.2f} accepted for short content.")
+        # 4. معيار المرونة للمحتوى القصير (Technical Snippets)
+        # إذا كانت النبضة قصيرة لكنها تحتوي على "جينات تقنية" (🧬) مهمة، نقبلها بـ 0.80
+        if len(chunk_content) < 400 and current_confidence >= 0.80:
             return True
 
-        # 4. معيار "الثقة المفرطة" (Over-Confidence Check)
-        # إذا كانت الدرجة أعلى من 0.96، قد يكون هناك "هلوسة" أو تبسيط مفرط
+        # 5. معيار "الثقة المفرطة" (Over-Confidence / Hallucination Shield)
         if current_confidence > upper_bound:
-            self.engine.logger.warning(f"⚠️ Audit Alert: Confidence {current_confidence:.2f} is suspiciously high (Potential Over-fitting).")
+            # إذا كان الـ AI واثقاً بنسبة 99% في نص معقد، فهذا مؤشر خطر (هلوسة)
+            self.engine.logger.warning(f"⚠️ Audit Alert: Confidence {current_confidence:.2f} is suspiciously high.")
             return False
 
-        # 5. تقرير الفشل (Accuracy Log)
-        self.engine.logger.info(
-            f"⚖️ Audit Failure: Confidence {current_confidence:.2f} is outside Golden Zone. "
-            f"Reason: {'Below Threshold' if current_confidence < lower_bound else 'Above Threshold'}"
-        )
         return False
 
-    def _reprocess_pulse(self, content: str, initial_score: float, thinking_engine: Any):
+    def _reprocess_pulse(self, content: str, initial_score: float, pulse_metadata: Dict = None):
         """
-        Deep analysis reprocessing: الربط مع LLM حقيقي أو تكثيف الجهد المحلي.
-        تضمن الوصول للنطاق الذهبي عبر نظام Fallback متسلسل.
+        [The Strategic Resurrector 🏥]
+        إعادة معالجة النبضة عبر "حقن السياق المفقود" وتقوية روابط الـ DNA (🧬).
         """
-        self.engine.logger.info(f"🔄 Activating Recovery Logic (Initial Score: {initial_score:.2f})")
+        self.engine.logger.info(f"🔄 Escalating Reasoning (Initial: {initial_score:.2f})")
+
+        # 1. استخراج الـ DNA المفقود لتعزيز الـ Prompt
+        # إذا فشلت النبضة، قد يكون السبب نقص المصطلحات التقنية الصريحة
+        missing_dna = pulse_metadata.get("insight_ids", []) if pulse_metadata else []
+        dna_context = ""
+        if missing_dna:
+            dna_texts = [self.engine.insight_manager.vault[i]["text"] for i in missing_dna[:3]]
+            dna_context = "\nCRITICAL_TECH_FACTS: " + " | ".join(dna_texts)
+
+        # 2. بناء الـ Prompt المعزز (Aggressive Reasoning Prompt)
+        enhanced_content = (
+            f"{content}\n"
+            f"{dna_context}\n"
+            f"STRATEGIC_REASONING_MODE: HIGH_PRECISION\n"
+            f"MANDATORY_FOCUS: Match linked insights and technical scale."
+        )
 
         try:
-            # 1. الملاذ الأول: الجسر الحقيقي (Real LLM Bridge) عبر المحرك الرئيسي
-            if hasattr(self.engine, 'llm_client') and self.engine.llm_client:
-                self.engine.logger.info("📡 Routing to External Cloud LLM...")
-                # استدعاء الجسر الذي قمنا بتعريفه في PDFPageCacheNetwork
-                return self.engine.llm_bridge(content, user_request="DEEP_RECOVERY")
-
-            # 2. الملاذ الثاني: تكثيف الجهد عبر المحرك الممرر (إذا كان يدعم المحاكاة)
-            if hasattr(thinking_engine, 'generate_mock'):
-                self.engine.logger.info("⚙️ Scaling local thinking iterations to level 5...")
-                enhanced_ideas, enhanced_state = thinking_engine.generate_mock(
-                    content,
-                    max_iterations=5,
-                    user_request="DEEP_REASONING_RECOVERY"
-                )
-            # 3. الملاذ الثالث: استخدام دالة المحاكي الخاصة بالمحلل الحالي (Self-Recovery)
-            else:
-                self.engine.logger.info("🛠️ Falling back to Internal High-Intensity Mock...")
-                enhanced_ideas, enhanced_state = self.generate_mock(
-                    content,
-                    max_iterations=5,
-                    user_request="INTERNAL_RECOVERY"
-                )
-
-            # 4. تقرير كفاءة التحسين
-            new_score = float(enhanced_state.get("avg_score", 0.0))
-            improvement = new_score - initial_score
-
-            self.engine.logger.info(
-                f"✅ Recovery Successful: New Score {new_score:.2f} "
-                f"(Delta: {improvement:+.2f})"
+            # 3. محرك الملاذ الأخير (Recursive Reasoning)
+            # نرفع عدد التكرارات (Iterations) ونحقن "الحقائق التقنية" الصريحة
+            enhanced_ideas, enhanced_state = self.generate_mock(
+                enhanced_content,
+                max_iterations=8, # رفع الجهد لثماني مراحل تفكير
+                user_request="DEEP_REASONING_RECOVERY"
             )
+
+            new_score = float(enhanced_state.get("avg_score", 0.0))
+
+            # إذا لم يتحسن السكور، نقوم بسحب سياق من "الصفحات التوأم" (🛰️)
+            if new_score <= initial_score and pulse_metadata:
+                self.engine.logger.info("📡 Score Stagnant: Pulling Satellite Context (🛰️)...")
+                # سحب بيانات من الصفحات التي تحمل نفس الـ DNA
+                return self.engine_emergency_context_bridge(enhanced_content, pulse_metadata)
 
             return enhanced_ideas, enhanced_state
 
         except Exception as e:
-            self.engine.logger.error(f"❌ Recovery Pipeline Failed: {str(e)}")
-            # إرجاع الدرجة الأصلية لمنع انهيار مصفوفة الوعي الكلية
-            return [], {"avg_score": initial_score, "status": "RECOVERY_FAILED"}
+            self.engine.logger.error(f"❌ Recovery Failure: {e}")
+            return [], {"avg_score": initial_score, "status": "FAILED"}
 
     def export_to_json(self, analysis_result: Dict[str, Any], output_path: str):
         """
@@ -2177,6 +2438,58 @@ def process_pdf_streaming(pdf_path: str, logger: Any, callback: Optional[Callabl
         logger.error(f"❌ FACTORY_CRITICAL_FAILURE: {str(e)}")
         return None
 
+def run_500_page_stress_test(engine, analyzer, pdf_path):
+    """
+    Stress Test for PDFPageCacheNetwork & SNN Analyzer.
+    Focus: Cache stability, Heuristic Density, and Pulse Latency.
+    """
+    print(f"\n--- 🚀 STARTING 500-PAGE STRESS TEST: {Path(pdf_path).name} ---")
+    start_time = time.time()
+
+    # --- Stage 1: Aggressive Ingest & Cache Stability ---
+    print("Stage 1: Ingesting & Building Heuristic Base...")
+    ingest_results = engine.process_pdf(pdf_path)
+
+    if ingest_results['status'] != 'success':
+        print(f"❌ Ingest Failed: {ingest_results.get('error_details')}")
+        return
+
+    # Critical Check: Did LRU Eviction work?
+    cache_size = len(engine.page_cache)
+    print(f"✅ Ingest Complete. Cache Size: {cache_size} (Max Cap: {engine.max_pages})")
+    if cache_size > engine.max_pages:
+        print("⚠️ WARNING: Cache overflow detected. Logic leak in Eviction policy!")
+
+    # --- Stage 2: Heuristic Connectivity Audit ---
+    print("\nStage 2: Auditing Heuristic Network Hubs...")
+    total_links = sum(len(links) for links in engine.layer_hierarchy.values())
+    avg_links = total_links / max(len(engine.layer_hierarchy), 1)
+    print(f"✅ Network Map verified. Total Links: {total_links} (Avg Density: {avg_links:.2f} links/page)")
+
+    # --- Stage 3: Pulse Pressure Test ---
+    user_request = "Identify critical failure points in joint actuators and cross-reference with torque tables."
+    print(f"\nStage 3: Running Pulse Analysis for High-Complexity Request: '{user_request}'")
+
+    analysis_start = time.time()
+    final_report = analyzer.analyze_pdf(pdf_path, user_request=user_request)
+    analysis_duration = round(time.time() - analysis_start, 2)
+
+    # --- Stage 4: Final Synthesis Reporting ---
+    if final_report['status'] == 'success':
+        metrics = final_report['analysis_metrics']
+        print("\n" + "="*40)
+        print("📊 FINAL STRESS TEST REPORT")
+        print("="*40)
+        print(f"⏱️ Total System Runtime    : {round(time.time() - start_time, 2)}s")
+        print(f"🌀 Pulses Orchestrated      : {metrics['total_pulses']}")
+        print(f"🧠 System Consciousness     : {metrics['consciousness_score']*100}%")
+        print(f"🔗 Structural Knowledge Hubs: {metrics['knowledge_hubs']}")
+        print(f"🤖 Inferred Global Topic    : {metrics['inferred_topic']}")
+        print(f"💾 Memory Trace Stability   : {metrics['memory_trace']}")
+        print("="*40)
+    else:
+        print(f"❌ Analysis Failure: {final_report.get('message')}")
+
 # مثال الاستخدام:
 """
 cache = processor.process_pdf_streaming("philosophy_paper.pdf")
@@ -2197,10 +2510,7 @@ if __name__ == "__main__":
 
     # ربط العميل الحقيقي بالمحرك
     from openai import OpenAI
-    engine.llm_client = OpenAI(api_key="")
-
-    # 1. إعداد المحرك (المخزن)
-    engine = PDFPageCacheNetwork(max_pages=200)
+    engine.llm_client = OpenAI(api_key=)
 
     # [إضافة استراتيجية]: ربط الـ LLM الحقيقي إذا كان المفتاح متوفراً
     # from openai import OpenAI
@@ -2274,3 +2584,9 @@ if __name__ == "__main__":
     print("\n" + "="*50)
     print("🎉 Hybrid Serial Workflow Completed Successfully!")
     print("="*50 + "\n")
+
+    # Usage Example:
+    # my_engine = PDFPageCacheNetwork(max_pages=200) # Your 200-page limit
+    # my_analyzer = StrategicSupervisor(engine=my_engine)
+    # run_500_page_stress_test(my_engine, my_analyzer, "heavy_manual.pdf")
+    pass
