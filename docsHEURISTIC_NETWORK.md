@@ -143,14 +143,6 @@ When you search for information on **page 10**, you don't just get page 10, but 
 
 - **Complete Separation Between Processing and Reasoning**: Ready for mockups or any LLM (Grok, Cloud, OpenAI, etc.).
 
-## 🧠 How Does a Heuristic Network Work?
-
-→ Read the simplified and detailed explanation: **[docs/HEURISTIC_NETWORK.md](docs.HEURISTIC_NETWORK.md)**
-
-(Explains indexing, horizontal and vertical linking, intelligent retrieval, and the difference between dumb and smart search)
-
-## 🚀 Installation
-
 ---
 
 📊 ## altaqarir :
