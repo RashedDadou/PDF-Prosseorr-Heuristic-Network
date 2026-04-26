@@ -180,22 +180,24 @@ The synthesized output is a verified Knowledge Graph, ensuring the final Audit R
 
 ---
 
-# Python used...
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+## 🧠 How Does a Heuristic Network Work?
+
+→ Read the simplified and detailed explanation: **[docs/HEURISTIC_NETWORK.md](docsHEURISTIC_NETWORK.md)**.
+
+→ Analytical Comparison: PDF Prosseorr vs. Traditional Software : **[docs/COMPARISON_WITH_TRADITIONAL_TOOLS.md](docsCOMPARISON_WITH_TRADITIONAL_TOOLS.md)**.
+
+→ Processing a Huge PDF File: **[docs/PDF_PROCESSING_CHALLENGE.md](docsPDF_PROCESSING_CHALLENGE.md)**.
+
+(Explains indexing, horizontal and vertical linking, intelligent retrieval, and the difference between dumb and smart search)
+
+---
 
 # Copyright
 [![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-lightgrey.svg)](https://github.com/RashedDadou/PDF-Prosseorr-Heuristic-Network/blob/main/LICENSE)
 ![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-lightgrey.svg)
 
----
-
-## 🧠 How Does a Heuristic Network Work?
-
-→ Read the simplified and detailed explanation: **[docs/HEURISTIC_NETWORK.md](docsHEURISTIC_NETWORK.md)**
-→ Analytical Comparison: PDF Prosseorr vs. Traditional Software : **[docs/COMPARISON_WITH_TRADITIONAL_TOOLS.md](docsCOMPARISON_WITH_TRADITIONAL_TOOLS.md)**
-→ Processing a Huge PDF File: **[docs/PDF_PROCESSING_CHALLENGE.md](docsPDF_PROCESSING_CHALLENGE.md)**
-
-(Explains indexing, horizontal and vertical linking, intelligent retrieval, and the difference between dumb and smart search)
+# Python used...
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 
 ```
 
