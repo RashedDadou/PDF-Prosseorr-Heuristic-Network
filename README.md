@@ -289,39 +289,29 @@ This diagram illustrates how the system breaks the 200+ page barrier by processi
 ## 3. Inference & Audit Network
 This is the "brain" that connects Engine C and the audit analyzer in File A. The diagram shows how the 4x4 arrays are validated by matching them to geometric rules to ensure there are no data fragments.
 
---=
+---
 
-# Note for engineers:
-This architecture is based on the principle of "Separation of Concerns," where each module has a specific responsibility (extraction, processing, auditing), making the system scalable to suit multiple industry sectors.
+# 🛡️ Sovereign Engine: Multilayered System Architecture
 
-This image is designed for advanced users, illustrating the data flow through the three layers we discussed in a technically professional (dark theme) style that explains the software's mechanics.
+![Sovereign Engine Internal Workings](Gemini_Generated_Image_j0i3lhj0i3lhj0i3.png)
 
-🛡️ Sovereign Engine: Multilayered System Architecture
-[Image labeled 'Sovereign Engine Internal Workings' and 'Gemini_Generated_Image_j0i3lhj0i3lhj0i3.png']
+> **Note for Engineers:** This architecture follows the "Separation of Concerns" principle. Each module (Extraction, Processing, Auditing) operates independently, ensuring system scalability across diverse industrial sectors.
 
-Explanation of the diagram's components (for experts):
+---
 
-## 1. Layer 1: Structural Anatomy Layer (Pre-Processing)
+### 🧩 Architectural Component Analysis
 
-The figure shows how a large PDF document (214+ pages) is received as raw, unstructured data.
+#### 1. Layer 1: Structural Anatomy (Pre-Processing)
+The engine ingests raw, unstructured PDF data (e.g., 214+ pages) and initiates **Layout Coordinate Reconstruction**. By mapping geometric coordinates for paragraph blocks and matrix grids before extraction, the system prevents row/column misalignment in high-precision datasets.
 
-The engine performs a "Layout Coordinate Reconstruction" process, where "Paragraph Blocks" and "Table/Matrix Grids" are defined as separate geometric maps before any text extraction. This ensures that rows and columns in sensitive data do not overlap.
+#### 2. Layer 2: Batched Lifecycle & Memory Management
+The "Stability Core" of the engine. By utilizing a **Batch Cycle** (e.g., 20-page increments), the system performs a cyclic **Memory Flush**. This ensures that RAM utilization remains constant and predictable, preventing process termination during large-scale document ingestion.
 
-## 2. Layer 2: Batch Lifecycle & Memory Management
-
-This is the "heart of stability" in the system. The diagram shows the Batch Cycle, where specific batches (such as pages 21-40) are loaded.
-
-After inference, a Memory Flush (cache release) is performed, and the results are archived to disk.
-
-Note the RAM Utilization indicator on the right; it shows how memory consumption remains constant throughout the file processing time, regardless of its size.
-
-## 3. Layer 3: Inference & Mathematical Audit Network
-
-This shows how the tasks are divided: The Inference Engine (C) performs Semantic Extraction.
-
-In parallel, the Mathematical Integrity Analyzer (A) performs Matrix 4x4 Verification to mathematically verify the integrity of the matrix structures.
-
-The outputs are integrated into a unified "Knowledge Graph" to produce a "Verified Knowledge Base & Audit Report," a report that ensures high stability.
+#### 3. Layer 4: Inference & Mathematical Audit Network
+A dual-track processing pipeline:
+- **Inference Engine (C)**: Executes semantic data extraction.
+- **Mathematical Integrity Analyzer (A)**: Performs real-time **4x4 Matrix Verification**.
+The synthesized output is a verified Knowledge Graph, ensuring the final Audit Report reaches maximum mathematical stability.
 
 ```
 
