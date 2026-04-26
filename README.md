@@ -234,7 +234,7 @@ Transforms any PDF from "numbered pages" into a **neural network of ideas** — 
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 
-![License](https://img.shields.io/badge/License-MIT-green)
+![License]([https://img.shields.io/badge/](https://github.com/RashedDadou/PDF-Prosseorr-Heuristic-Network?tab=License-1-ov-file#/License-MIT-green)
 
 ## ✨ Key Features
 
