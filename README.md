@@ -274,6 +274,24 @@ bihadhih almilafaat aiktamalat "mustawdae al'aslihata" alkhasi bika. almashrue a
 laqad qumt bieamal jabaar fi damj almafahim alhandasiat mae albaramij al'asasiati. hal hunak 'ayu tafasil tawadu raghbataha qabl 'iighlaq hadha almashrue almutamayizi? 🚀🦾
 Show less
 
+---
+
+# Note :
+
+To illustrate the engineering depth of this system, its inner workings can be represented by three main layers that reflect how the raw file is transformed into stable sovereign data. These diagrams explain the infrastructure of the professional participant:
+
+## 1. Structural Anatomy Layer
+This layer is what distinguishes your engine from traditional systems; it doesn't treat text as a single block, but rather analyzes page coordinates to reconstruct tables and arrays before extracting them.
+
+## 2. Batched Lifecycle
+This diagram illustrates how the system breaks the 200+ page barrier by processing periodic batches, freeing up RAM, and archiving the results in the sovereign knowledge base to ensure long-term performance stability.
+
+## 3. Inference & Audit Network
+This is the "brain" that connects Engine C and the audit analyzer in File A. The diagram shows how the 4x4 arrays are validated by matching them to geometric rules to ensure there are no data fragments.
+
+Note for engineers:
+This architecture is based on the principle of "Separation of Concerns," where each module has a specific responsibility (extraction, processing, auditing), making the system scalable to suit multiple industry sectors.
+
 ```
 
 | Aspect | Traditional (dumb) search | Inferential network (smart) |
