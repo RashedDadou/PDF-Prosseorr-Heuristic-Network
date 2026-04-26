@@ -1,7 +1,7 @@
-## Important note:
+# Important note:
 This explanation provides a simplified overview of the content of the original version.
 
-# Structure and Order of Functions in the PDFPageCacheNetwork Class
+## Structure and Order of Functions in the PDFPageCacheNetwork Class
 
 This file illustrates the final and organized order of functions in the `PDFPageCacheNetwork` class according to **Functional Specialization** (Separation of Concerns).
 
