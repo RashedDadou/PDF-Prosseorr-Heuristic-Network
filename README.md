@@ -289,7 +289,9 @@ This diagram illustrates how the system breaks the 200+ page barrier by processi
 ## 3. Inference & Audit Network
 This is the "brain" that connects Engine C and the audit analyzer in File A. The diagram shows how the 4x4 arrays are validated by matching them to geometric rules to ensure there are no data fragments.
 
-Note for engineers:
+--=
+
+# Note for engineers:
 This architecture is based on the principle of "Separation of Concerns," where each module has a specific responsibility (extraction, processing, auditing), making the system scalable to suit multiple industry sectors.
 
 ```
