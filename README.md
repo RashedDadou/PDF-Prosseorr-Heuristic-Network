@@ -1,7 +1,5 @@
 # Inferential (PDF Processing) Network :
 
-![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-lightgrey.svg)
-
 ## Basic Idea:
 
 Large Companies (The Dilemma):
@@ -228,16 +226,6 @@ When you search for information on **page 10**, you don't just get page 10, but 
 
 ---
 
-# HeuristicMind
-
-**A Conscious Heuristic Network for Transforming Documents into a Coherent Knowledge Map**
-
-Transforms any PDF from "numbered pages" into a **neural network of ideas** — connecting knowledge blocks, uncovering semantic relationships, and building cumulative awareness around the content.
-
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
-
-[![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-lightgrey.svg)](https://github.com/RashedDadou/PDF-Prosseorr-Heuristic-Network/blob/main/LICENSE)
-
 ## ✨ Key Features
 
 - **Hybrid Heuristic Network (Heuristic + Semantic)**: Connects pages by keywords and semantic similarities.
@@ -314,6 +302,15 @@ A dual-track processing pipeline:
 - **Inference Engine (C)**: Executes semantic data extraction.
 - **Mathematical Integrity Analyzer (A)**: Performs real-time **4x4 Matrix Verification**.
 The synthesized output is a verified Knowledge Graph, ensuring the final Audit Report reaches maximum mathematical stability.
+
+---
+
+# Python used...
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+
+# Copyright
+[![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-lightgrey.svg)](https://github.com/RashedDadou/PDF-Prosseorr-Heuristic-Network/blob/main/LICENSE)
+![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-lightgrey.svg)
 
 ```
 
