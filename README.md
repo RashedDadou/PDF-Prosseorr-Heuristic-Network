@@ -69,7 +69,7 @@ analyze layout structure.
 
 ---
 
-### 🛡️ Sovereignty Comparison: Sovereign Engine vs. SaaS AI
+## 🛡️ Sovereignty Comparison: Sovereign Engine vs. SaaS AI
 
 | Comparison Points | Large Business Systems (SaaS AI) | Your System (Sovereign Engine) |
 
@@ -87,7 +87,7 @@ analyze layout structure.
 
 ---
 
-# 🤖 SuperVisorSmartReporter (Sovereign Engine) :
+## 🤖 SuperVisorSmartReporter (Sovereign Engine) :
 
 An advanced sovereign system for analyzing engineering documents and extracting matrices using:
 
@@ -115,7 +115,7 @@ python main.py
 
 ---
 
-🏗️. ## Project Organizational Structure (Sovereign Architecture):
+## 🏗️. ## Project Organizational Structure (Sovereign Architecture):
 
 Plaintext
 SuperVisorSmartReporter/
