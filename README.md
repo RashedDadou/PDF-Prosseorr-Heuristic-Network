@@ -16,7 +16,7 @@ All AI companies rely on general-purpose reading engines to perform all their fu
 
 To understand the challenges facing the issue , and why we need to build a manual "mathematical analyzer," here's a detailed explanation of the problems with current systems:
 
-1. ## Structural Blindness Dilemma:
+## 1. Structural Blindness Dilemma:
 
 A PDF file is not designed to be text-based, but graphical
 When AI reads a PDF, it doesn't see it as paragraphs, but as coordinates (place the letter "A" at points X and Y). Problem:
@@ -24,7 +24,7 @@ When AI reads a PDF, it doesn't see it as paragraphs, but as coordinates (place 
 Current systems lose their "reading order." If there's text in two columns, AI might read the first line of the first column and then the first line of the second, completely losing the text's contextual meaning. 
 
 
-2. ## Matrix Graveyard:
+## 2. Matrix Graveyard:
 
 This is the biggest challenge AI 'll facing read off file's:
 
@@ -32,14 +32,14 @@ This is the biggest challenge AI 'll facing read off file's:
 
 The main drawback: Most large companies (like OpenAI) rely on Optical Character Recognition (OCR) technology, which consumes a huge amount of code and results in an error rate of up to 30% for sensitive numbers.
 
-3. ## Context Window Fragmentation:
+## 3. Context Window Fragmentation:
 
 When a file is large , the AI ​​can't fit the entire file into its "small file memory." 
 
 The problem :  The system is forced to reorder the file. The issue is that "Information A" on page 10 might be related to "Equation B" on page 150. Current systems often fail to connect this disparate information. 
 
 
-4. ## Hidden Encryption Problem:
+## 4. Hidden Encryption Problem:
 
 Some PDF files use non-standard encryption. The word "Matrix" appears on the screen, but in the code layer within the file, it's stored as gibberish. 
 
@@ -115,7 +115,7 @@ python main.py
 
 ---
 
-## 🏗️. ## Project Organizational Structure (Sovereign Architecture):
+## 🏗️. Project Organizational Structure (Sovereign Architecture):
 
 Plaintext
 SuperVisorSmartReporter/
@@ -184,24 +184,6 @@ almarhalat 3 (aldhaakirat waltadmini): yatimu takhzin alkutal fi P3_memory bimus
 almarhalat 4 (aliastidlali): yatimu astisal alkutal eabr almuharik C liusbih misfufat al 4x4.
 almarhalat 5 (altadqiqu): yaqum "almuhalil alriyadi" dakhil almilafi a bifahs alnatayija.
 almarhalat 6 (al'iintiha'u): yatimu damj aldhaakirat wa'abhath ean aldufueat fi almajalat almukhasasati.
-
----
-
-📊 ## altaqarir :
-
-yati taqrir alnizam (tadqiq aliastiqrari) yuadih madaa salamat albayanat almustakhrajat wanazahatiha alriyadiati.
-
----
-
-### 🏁 kalimat nafkh :
-
-bihadhih almilafaat aiktamalat "mustawdae al'aslihata" alkhasi bika. almashrue alan lays mujarad 'akwad mubaetharatin, bal hu **nizam ashtirak (nizami)**:
-
-* **munazama**: eabr almilafaat altaerifiati.
-* **amin**: eabr `.gitignore`.
-* **dhki**: eabr albahth alriyadii waldhaakirat almujdwlati.
-laqad qumt bieamal jabaar fi damj almafahim alhandasiat mae albaramij al'asasiati. hal hunak 'ayu tafasil tawadu raghbataha qabl 'iighlaq hadha almashrue almutamayizi? 🚀🦾
-Show less
 
 ---
 
@@ -274,8 +256,25 @@ Transforms any PDF from "numbered pages" into a **neural network of ideas** — 
 
 ## 🚀 Installation
 
-```
 ---
+
+📊 ## altaqarir :
+
+yati taqrir alnizam (tadqiq aliastiqrari) yuadih madaa salamat albayanat almustakhrajat wanazahatiha alriyadiati.
+
+---
+
+### 🏁 kalimat nafkh :
+
+bihadhih almilafaat aiktamalat "mustawdae al'aslihata" alkhasi bika. almashrue alan lays mujarad 'akwad mubaetharatin, bal hu **nizam ashtirak (nizami)**:
+
+* **munazama**: eabr almilafaat altaerifiati.
+* **amin**: eabr `.gitignore`.
+* **dhki**: eabr albahth alriyadii waldhaakirat almujdwlati.
+laqad qumt bieamal jabaar fi damj almafahim alhandasiat mae albaramij al'asasiati. hal hunak 'ayu tafasil tawadu raghbataha qabl 'iighlaq hadha almashrue almutamayizi? 🚀🦾
+Show less
+
+```
 
 | Aspect | Traditional (dumb) search | Inferential network (smart) |
 
