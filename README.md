@@ -116,37 +116,67 @@ python main.py
 ---
 
 🏗️. ## Project Organizational Structure (Sovereign Architecture):
+
 Plaintext
 SuperVisorSmartReporter/
 │
+
 ├── 📂 sovereign_workspace/ # (Automatic) Main folder for temporary processes
+
 │ └── 📂 temp_chunks/ # Text blocks being processed in real time
+
 │
+
 ├── 📂 sovereign_knowledge_base/ # (Automatic) Output of the "Structural Awareness Network"
+
 │ ├── 📂 batch_1_to_20/ # Archive of the first batch (maps and content)
+
 │ ├── 📂 batch_21_to_40/ # Archive of the second batch
+
 │ └── 📄 full_knowledge_graph.json # Ultimate Integrated Inferential Grid
+
 │
+
 ├── 📜 main.py # [Power Switch] - Connects units and launches the task
+
 │
+
 ├── ⚙️ A_pdf_processor.py # [Field Commander] - Manages the flow and the mathematical analyzer
+
 │
+
 ├── 🛠️ B_data_extractor.py # [Dissecter] - Extracts text and converts it into nodes
+
 │
+
 ├── 🧠 C_Tillage_engine.py # [Flow Engine] - Connects AI and results
+
 │
+
 ├── 🛡️ Infrastructure_Units/ # Core Support Units
+
 │ ├── 📄 P1_sovereign_utils.py # Control System (Supervisor) and Accident Log
+
 │ ├── 📄 P2_embedding_logic.py # Vectorization
+
 │ └── 📄 P3_memory.py # Memory
+
 │
+
 ├── 📄 ROBOTICS.pdf # [alhadafi] - almilafu almurad aliakhtiar masfufatih
+
 │
+
 ├── 📝 require.txt # qayimat altatbiqat al'asasiat liltashghil
+
 ├── 🔐 .env # milafu almafatih (sri)
+
 ├── 🚫 .gitignore # aladhi yamnae rafe almilafaat li GitHub
+
 └── 📘 README.md # dalil altashghil waltaerif bialmashrue
+
 ---
+
 🔄 ## masar tadafuq albayanat (Data Workflow) :
 almarhalat 1 (Trigger): tabda min main.py hayth yatimu aliatisal bialqayid A.
 almarhalat 2 (aliastikhraji): yaqum almilafa B liusbih PDF 'iilaa kutal nasiya (all_chunks).
