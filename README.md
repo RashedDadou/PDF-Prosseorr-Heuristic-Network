@@ -234,7 +234,7 @@ Transforms any PDF from "numbered pages" into a **neural network of ideas** — 
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 
-![License]([https://img.shields.io/badge/](https://github.com/RashedDadou/PDF-Prosseorr-Heuristic-Network?tab=License-1-ov-file#/License-MIT-green)
+![License](https://github.com/RashedDadou/PDF-Prosseorr-Heuristic-Network?tab=License-1-ov-file#/License-green)
 
 ## ✨ Key Features
 
@@ -293,6 +293,35 @@ This is the "brain" that connects Engine C and the audit analyzer in File A. The
 
 # Note for engineers:
 This architecture is based on the principle of "Separation of Concerns," where each module has a specific responsibility (extraction, processing, auditing), making the system scalable to suit multiple industry sectors.
+
+This image is designed for advanced users, illustrating the data flow through the three layers we discussed in a technically professional (dark theme) style that explains the software's mechanics.
+
+🛡️ Sovereign Engine: Multilayered System Architecture
+[Image labeled 'Sovereign Engine Internal Workings' and 'Gemini_Generated_Image_j0i3lhj0i3lhj0i3.png']
+
+Explanation of the diagram's components (for experts):
+
+## 1. Layer 1: Structural Anatomy Layer (Pre-Processing)
+
+The figure shows how a large PDF document (214+ pages) is received as raw, unstructured data.
+
+The engine performs a "Layout Coordinate Reconstruction" process, where "Paragraph Blocks" and "Table/Matrix Grids" are defined as separate geometric maps before any text extraction. This ensures that rows and columns in sensitive data do not overlap.
+
+## 2. Layer 2: Batch Lifecycle & Memory Management
+
+This is the "heart of stability" in the system. The diagram shows the Batch Cycle, where specific batches (such as pages 21-40) are loaded.
+
+After inference, a Memory Flush (cache release) is performed, and the results are archived to disk.
+
+Note the RAM Utilization indicator on the right; it shows how memory consumption remains constant throughout the file processing time, regardless of its size.
+
+## 3. Layer 3: Inference & Mathematical Audit Network
+
+This shows how the tasks are divided: The Inference Engine (C) performs Semantic Extraction.
+
+In parallel, the Mathematical Integrity Analyzer (A) performs Matrix 4x4 Verification to mathematically verify the integrity of the matrix structures.
+
+The outputs are integrated into a unified "Knowledge Graph" to produce a "Verified Knowledge Base & Audit Report," a report that ensures high stability.
 
 ```
 
