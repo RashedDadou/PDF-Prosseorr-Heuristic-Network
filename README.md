@@ -187,6 +187,14 @@ The synthesized output is a verified Knowledge Graph, ensuring the final Audit R
 [![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-lightgrey.svg)](https://github.com/RashedDadou/PDF-Prosseorr-Heuristic-Network/blob/main/LICENSE)
 ![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-lightgrey.svg)
 
+---
+
+## 🧠 How Does a Heuristic Network Work?
+
+→ Read the simplified and detailed explanation: **[docs/HEURISTIC_NETWORK.md](docsHEURISTIC_NETWORK.md)**
+
+(Explains indexing, horizontal and vertical linking, intelligent retrieval, and the difference between dumb and smart search)
+
 ```
 
 | Aspect | Traditional (dumb) search | Inferential network (smart) |
