@@ -1,5 +1,7 @@
 # Inferential (PDF Processing) Network :
 
+![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-lightgrey.svg)
+
 ## Basic Idea:
 
 Large Companies (The Dilemma):
@@ -234,7 +236,7 @@ Transforms any PDF from "numbered pages" into a **neural network of ideas** — 
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 
-![License](https://github.com/RashedDadou/PDF-Prosseorr-Heuristic-Network?tab=License-1-ov-file#/License-green)
+[![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-lightgrey.svg)](https://github.com/RashedDadou/PDF-Prosseorr-Heuristic-Network/blob/main/LICENSE)
 
 ## ✨ Key Features
 
