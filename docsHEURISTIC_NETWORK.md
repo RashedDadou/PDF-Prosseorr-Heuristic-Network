@@ -16,18 +16,18 @@ This order makes the code clearer, easier to maintain, and simpler to develop.
 ### Second: Extraction Engine
 - `process_pdf`
 - `process_pdf_streaming`
-- `extract_text`
-- `_extract_layout_structure` (Private)
+- `########_text`
+- `_extract_######_#######` (Private)
 
 ### Third: Caching & Storage
-- `add_page`
+- `###_####`
 - `_classify_layer` (Private)
-- `extract_keywords` (or `PDF_extract_keywords`)
+- `#######_########` (or `############`)
 
 ### Fourth: Heuristic Network
-- `_build_heuristic_links` (Private)
-- `_build_visual_heuristics` (Private)
-- `get_related_pages`
+- `#####_#######_######` (Private)
+- `######_##########_####` (Private)
+- `####_########_######`
 
 ### Fifth: Search & Navigation
 - `semantic_search`
@@ -35,8 +35,8 @@ This order makes the code clearer, easier to maintain, and simpler to develop.
 
 ### Sixth: Thinking & Analysis
 - `analyze_pdf`
-- `advance_pdf_analyzer`
-- `generate_mock`
+- `#########_######_#####`
+- `generate_####`
 
 ### Seventh: Export & Output ← New Addition
 - `export_to_json`
@@ -165,7 +165,7 @@ Show less
 
 ## Why this order?
 
-- **Natural Flow**: Initialization → Extraction → Storage → Network Building → Search → Analysis → Export.
+- **Natural Flow**: Initialization → ########## → ####### → ####### ######## → Search → ######## → Export.
 
 - **Ease of Reading**: Upon opening the file, the developer immediately knows where to find each function.
 
