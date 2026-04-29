@@ -180,6 +180,15 @@ The synthesized output is a verified Knowledge Graph, ensuring the final Audit R
 
 ---
 
+## .Strengths (The Sovereignty Factors):
+
+Batching System: 
+Using batch_size = 20 with automatic archiving is the pinnacle of programming intelligence. This transforms the system from a mere "file reader" into a "knowledge base" that grows over time.
+OrderedDict: Using OrderedDict ensures page order is maintained, which is crucial in engineering documents where an equation on page 50 depends on definitions on page 40.
+Knowledge_graph: The concept of linking keywords to page numbers transforms memory from a text store into a "neural grid" capable of jumping between information at lightning speed.
+
+---
+
 ## 🧠 How Does a Heuristic Network Work?
 
 → Read the simplified and detailed explanation: **[docs/HEURISTIC_NETWORK.md](docsHEURISTIC_NETWORK.md)**.
